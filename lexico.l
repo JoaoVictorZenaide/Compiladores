@@ -1,30 +1,17 @@
 %{
-#define ID 65
-#define NUM 66
-#define E 67
+#include "sintatico.tab.h"
 %}
+
 digit [0-9]
 letter [a-zA-Z]
+espaco [ \t]
+
 %%
-{digit}+                            { return NUM; }
+
+{digit}+                            { yylval = atoi(yytext); return INTEIRO; }
 {letter}({letter}|{digit})*         { return ID; }
-<<EOF>>							    { return E; }
+"+"                                 { return '+'; }
+[ \t]                               ; // ignora espaços e tabs
+"\n"                                { return FIM_DE_LINHA; }
+                                
 %%
-
-int main(){
-    int valDigit = 0;
-    int valID = 0;
-    int token;
-
-    while((token = yylex()) != E){
-        if(token == ID){
-            valID++;
-        }
-        else if(token == NUM){
-            valDigit++;
-        }
-    }
-    printf("quantidade de ID's: %d\nquantidade de numeros: %d\n", valID, valDigit);
-
-    return 0;
-}
