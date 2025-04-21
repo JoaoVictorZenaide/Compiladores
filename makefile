@@ -1,4 +1,7 @@
-all:
-	flex lexico.l
-	bison -d sintatico.y
-	gcc -o exemplo sintatico.tab.c lex.yy.c -lfl
+all: 	
+		clear
+		lex lexico.l
+		yacc -d sintatico.y
+		g++ -o glf y.tab.c -ll
+
+		./glf < exemplo.sla

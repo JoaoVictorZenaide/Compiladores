@@ -1,17 +1,31 @@
 %{
-#include "sintatico.tab.h"
+#include <string>
 %}
 
 digit [0-9]
 letter [a-zA-Z]
 espaco [ \t]
 
+ID {letter}({letter}|{digit})*
+
 %%
 
-{digit}+                            { yylval = atoi(yytext); return INTEIRO; }
-{letter}({letter}|{digit})*         { return ID; }
-"+"                                 { return '+'; }
-[ \t]                               ; // ignora espaços e tabs
-"\n"                                { return FIM_DE_LINHA; }
+{espaco}+                           ; // ignora espaços e tabs
+
+"\n"                                ; // ignora o /n
+
+"main"                              { return TOKEN_MAIN; }
+
+"int"                               { return TOKEN_TIPO_INT; }
+
+{digit}+                            { yylval.label = yytext; return TOKEN_DIGIT; }
+
+{ID}                                { yylval.label = yytext; return TOKEN_ID; }
+
+[(){}[\];,]                         { return *yytext; }
+
+[+\-*/]                             { return *yytext; }
+
+.                                   { *yytext; }
                                 
 %%
