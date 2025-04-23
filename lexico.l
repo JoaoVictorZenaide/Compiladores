@@ -16,7 +16,7 @@ ID {letter}({letter}|{digit})*
 
 "main"                              { return TOKEN_MAIN; }
 
-"int"                               { return TOKEN_TIPO_INT; }
+"int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
 {digit}+                            { yylval.label = yytext; return TOKEN_DIGIT; }
 
@@ -24,7 +24,7 @@ ID {letter}({letter}|{digit})*
 
 [(){}[\];,]                         { return *yytext; }
 
-[+\-*/]                             { return *yytext; }
+[+\-*/=]                            { return *yytext; }
 
 .                                   { *yytext; }
                                 
