@@ -18,7 +18,7 @@ ID {letter}({letter}|{digit})*
 
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
-{digit}+                            { yylval.label = yytext; return TOKEN_DIGIT; }
+{digit}+                            { yylval.label = yytext; return TOKEN_NUMERO_INT; }
 
 {ID}                                { yylval.label = yytext; return TOKEN_ID; }
 
