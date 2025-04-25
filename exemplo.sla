@@ -1,7 +1,4 @@
 int main() {
-    
-    int a;
-    int b;
-    b = 8;
-    a = 2 + b + 7 * 9;
+    string c;
+    c = "nao to aguentando mais";
 }

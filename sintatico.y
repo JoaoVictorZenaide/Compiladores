@@ -32,7 +32,13 @@
 %}
 
 %token TOKEN_TIPO_INT
-%token TOKEN_NUMERO_INT
+%token TOKEN_TIPO_FLOAT
+%token TOKEN_TIPO_STRING
+%token TOKEN_TIPO_BOOL
+%token TOKEN_VARIAVEL_INT
+%token TOKEN_VARIAVEL_FLOAT
+%token TOKEN_VARIAVEL_STRING
+%token TOKEN_VARIAVEL_BOOL
 %token TOKEN_ID
 %token TOKEN_MAIN
 %token TOKEN_FIM
@@ -40,6 +46,7 @@
 
 %start S
 
+%left '='
 %left '+' '-'
 %left '*' '/'
 
@@ -83,41 +90,104 @@ COMANDO 	: E ';'
 
 				add_na_tabela_simbolos($2.label, $1.label);
 			}
+			| TOKEN_TIPO_FLOAT TOKEN_ID ';' {
+				$$.label = "";
+				$$.traducao = "";
+				$$.tipo = "";
+
+				add_na_tabela_simbolos($2.label, $1.label);
+			}
+			| TOKEN_TIPO_STRING TOKEN_ID ';' {
+				$$.label = "";
+				$$.traducao = "";
+				$$.tipo = "";
+
+				add_na_tabela_simbolos($2.label, $1.label);
+			}
+			| TOKEN_TIPO_BOOL TOKEN_ID ';' {
+				$$.label = "";
+				$$.traducao = "";
+				$$.tipo = "";
+
+				add_na_tabela_simbolos($2.label, $1.label);
+			}
 			;
 
 E 			: E '+' E {
+				if($1.tipo == "float" || $3.tipo == "float"){
+					$$.tipo = "float";
+				}
 				$$.label = gerar_label();
 				add_na_tabela_simbolos($$.label, $$.tipo);
 
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
 			}
 			| E '-' E {
+				if($1.tipo == "float" || $3.tipo == "float"){
+					$$.tipo = "float";
+				}
 				$$.label = gerar_label();
 				add_na_tabela_simbolos($$.label, $$.tipo);
 				
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + $3.label + ";\n";
 			}
 			| E '*' E {
+				if($1.tipo == "float" || $3.tipo == "float"){
+					$$.tipo = "float";
+				}
 				$$.label = gerar_label();
 				add_na_tabela_simbolos($$.label, $$.tipo);
 
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + $3.label + ";\n";
 			}
 			| E '/' E {
+				if($1.tipo == "float" || $3.tipo == "float"){
+					$$.tipo = "float";
+				}
 				$$.label = gerar_label();
 				add_na_tabela_simbolos($$.label, $$.tipo);
 
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
 			}
+			| '(' E ')' {
+				$$.label = $2.label;
+				$$.tipo = $2.tipo;
+				$$.traducao = $2.traducao;
+			}
 			| TOKEN_ID '=' E {
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $1.label + " = " + $3.label + ";\n";
 			}
-			| TOKEN_NUMERO_INT {
+			| TOKEN_VARIAVEL_INT {
 				$$.tipo = "int";
 				$$.label = gerar_label();
 				add_na_tabela_simbolos($$.label, $$.tipo);
 				
 				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+			}
+			| TOKEN_VARIAVEL_FLOAT {
+				$$.tipo = "float";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos($$.label, $$.tipo);
+				
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+			}
+			| TOKEN_VARIAVEL_STRING {
+				$$.tipo = "string";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos($$.label, $$.tipo);
+				
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+			}
+			| TOKEN_VARIAVEL_BOOL {
+				$$.tipo = "bool";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos($$.label, $$.tipo);
+
+				char var_aux;
+				if ($1.label == "true") { var_aux = '1'; }
+				else if ($1.label == "false") { var_aux = '0'; }
+				
+				$$.traducao = "\t" + $$.label + " = " + var_aux + ";\n";
 			}
 			| TOKEN_ID {
 				bool encontrado = false;
