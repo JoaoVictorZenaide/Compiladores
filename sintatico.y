@@ -8,17 +8,23 @@
 
     using namespace std;
 
+    struct atributos{
+        string label;
+        string traducao;
+		string tipo;
+    };
+
 	int label_num;
 
 	void add_na_tabela_simbolos(string valor_nome_variavel, string valor_tipo_variavel);
 
 	string gerar_label();
 
-    struct atributos{
-        string label;
-        string traducao;
-		string tipo;
-    };
+	bool necessita_conversao_implicita_tipo(atributos dolar1, atributos dolar3);
+
+	string tipo_resultante(atributos dolar1, atributos dolar3);
+
+	bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4);
 
 	typedef struct{
 		string nome_variavel;
@@ -114,45 +120,137 @@ COMANDO 	: E ';'
 			;
 
 E 			: E '+' E {
-				if($1.tipo == "float" || $3.tipo == "float"){
-					$$.tipo = "float";
-				}
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
+				$$.tipo = tipo_resultante($1, $3);
 
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+				if(necessita_conversao_implicita_tipo($1, $3)){
+					string comando_extra;
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(label_extra, $$.tipo);
+
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
+						(($1.label != tipo_resultante($1, $3))? label_extra + " + " + $3.label: $1.label + " + " + label_extra) + ";\n";
+				}
+				else{
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
+				}
 			}
 			| E '-' E {
-				if($1.tipo == "float" || $3.tipo == "float"){
-					$$.tipo = "float";
+				$$.tipo = tipo_resultante($1, $3);
+
+				if(necessita_conversao_implicita_tipo($1, $3)){
+					string comando_extra;
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(label_extra, $$.tipo);
+
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
+						(($1.label != tipo_resultante($1, $3))? label_extra + " - " + $3.label: $1.label + " - " + label_extra) + ";\n";
 				}
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
-				
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + $3.label + ";\n";
+				else{
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + $3.label + ";\n";
+				}
 			}
 			| E '*' E {
-				if($1.tipo == "float" || $3.tipo == "float"){
-					$$.tipo = "float";
-				}
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
+				$$.tipo = tipo_resultante($1, $3);
 
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+				if(necessita_conversao_implicita_tipo($1, $3)){
+					string comando_extra;
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(label_extra, $$.tipo);
+
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
+						(($1.label != tipo_resultante($1, $3))? label_extra + " * " + $3.label: $1.label + " * " + label_extra) + ";\n";
+				}
+				else{
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + $3.label + ";\n";
+				}
 			}
 			| E '/' E {
-				if($1.tipo == "float" || $3.tipo == "float"){
-					$$.tipo = "float";
-				}
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
+				$$.tipo = tipo_resultante($1, $3);
 
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
+				if(necessita_conversao_implicita_tipo($1, $3)){
+					string comando_extra;
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(label_extra, $$.tipo);
+
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
+						(($1.label != tipo_resultante($1, $3))? label_extra + " / " + $3.label: $1.label + " / " + label_extra) + ";\n";
+				}
+				else{
+					$$.label = gerar_label();
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
+				}
 			}
 			| '(' E ')' {
 				$$.label = $2.label;
 				$$.tipo = $2.tipo;
 				$$.traducao = $2.traducao;
+			}
+			| '(' TOKEN_TIPO_INT ')' E {
+				if(possivel_realizar_casting_explicito("int", $4)){
+					$$.label = gerar_label();
+					$$.tipo = "int";
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(int) " + $4.label + ";\n";
+				}
+			}
+			| '(' TOKEN_TIPO_FLOAT ')' E {
+				if(possivel_realizar_casting_explicito("float", $4)){
+					$$.label = gerar_label();
+					$$.tipo = "float";
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(float) " + $4.label + ";\n";
+				}
+			}
+			| '(' TOKEN_TIPO_STRING ')' E {
+				if(possivel_realizar_casting_explicito("string", $4)){
+					$$.label = gerar_label();
+					$$.tipo = "string";
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(string) " + $4.label + ";\n";
+				}
+			}
+			| '(' TOKEN_TIPO_BOOL ')' E {
+				if(possivel_realizar_casting_explicito("bool", $4)){
+					$$.label = gerar_label();
+					$$.tipo = "bool";
+					add_na_tabela_simbolos($$.label, $$.tipo);
+
+					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(bool) " + $4.label + ";\n";
+				}
 			}
 			| TOKEN_ID '=' E {
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $1.label + " = " + $3.label + ";\n";
@@ -231,6 +329,65 @@ string gerar_label(){
 		}
 	}
     return "t" + std::to_string(label_num);
+}
+
+bool necessita_conversao_implicita_tipo(atributos dolar1, atributos dolar3){
+	if(dolar1.tipo != dolar3.tipo){
+		if(dolar1.tipo == "int" && dolar3.tipo == "float"){
+			return true;
+		}
+		else if(dolar1.tipo == "float" && dolar3.tipo == "int"){
+			return true;
+		}
+		else{
+			yyerror("Não é possível realizar operações com casting implícito nesses tipos!");
+		}
+	}
+	else{
+		return false;
+	}
+}
+
+string tipo_resultante(atributos dolar1, atributos dolar3){
+	if(dolar1.tipo == dolar3.tipo){
+		if(dolar1.tipo == "int"){
+			return "int";
+		}
+		else if(dolar1.tipo == "float"){
+			return "float";
+		}
+		else if(dolar1.tipo == "bool"){
+			return "bool";
+		}
+		else if(dolar1.tipo == "string"){
+			return "string";
+		}
+	}
+	else if(dolar1.tipo != dolar3.tipo){
+		if(dolar1.tipo == "int" && dolar3.tipo == "float"){
+			return "float";
+		}
+		else if(dolar1.tipo == "float" && dolar3.tipo == "int"){
+			return "float";
+		}
+		else{
+			yyerror("Não é possível realizar operações com esses tipos!");
+		}
+	}
+}
+
+bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4){
+	if(dolar4.tipo == tipo_token){
+		return true;
+	}
+	else if(dolar4.tipo != tipo_token) {
+		if((dolar4.tipo == "int" && tipo_token == "float") || (dolar4.tipo == "float" && tipo_token == "int")){
+			return true;
+		}
+		else{
+			yyerror("Não é possível efetuar casting explícito com esses tipos!");
+		}
+	}
 }
 
 int main( int argc, char* argv[] ) {

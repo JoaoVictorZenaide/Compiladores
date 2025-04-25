@@ -1,4 +1,4 @@
 int main() {
-    string c;
-    c = "nao to aguentando mais";
+    bool a;
+    a = true;
 }
