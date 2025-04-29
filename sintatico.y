@@ -8,30 +8,33 @@
 
     using namespace std;
 
+	int label_num;
+
     struct atributos{
         string label;
         string traducao;
 		string tipo;
     };
 
-	int label_num;
-
-	void add_na_tabela_simbolos(string valor_nome_variavel, string valor_tipo_variavel);
-
-	string gerar_label();
-
-	bool necessita_conversao_implicita_tipo(atributos dolar1, atributos dolar3);
-
-	string tipo_resultante(atributos dolar1, atributos dolar3);
-
-	bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4);
-
 	typedef struct{
-		string nome_variavel;
+		string nome_variavel_real;
+		string nome_variavel_temporaria;
 		string tipo_variavel;
 	} TIPO_SIMBOLO;
 
 	vector<TIPO_SIMBOLO> tabela_simbolos;
+
+	void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel);
+
+	string gerar_label();
+
+	TIPO_SIMBOLO buscar_na_tabela_simbolos(atributos a1);
+
+	bool necessario_conversao_implicita_tipo(string tipo1, string tipo2);
+
+	string tipo_resultante(atributos dolar1, atributos dolar3);
+
+	bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4);
 
     int yylex(void);
     void yyerror(string);
@@ -41,20 +44,32 @@
 %token TOKEN_TIPO_FLOAT
 %token TOKEN_TIPO_STRING
 %token TOKEN_TIPO_BOOL
+%token TOKEN_E_LOGICO
+%token TOKEN_OU_LOGICO
+%token TOKEN_DIFERENTE
+%token TOKEN_IGUAL_IGUAL
+%token TOKEN_MENOR_IGUAL
+%token TOKEN_MAIOR_IGUAL
 %token TOKEN_VARIAVEL_INT
 %token TOKEN_VARIAVEL_FLOAT
 %token TOKEN_VARIAVEL_STRING
 %token TOKEN_VARIAVEL_BOOL
 %token TOKEN_ID
 %token TOKEN_MAIN
+%token TOKEN_NOVA_LINHA
 %token TOKEN_FIM
 %token TOKEN_ERROR
 
 %start S
 
-%left '='
+%right '='
+%left LOGICO TOKEN_E_LOGICO TOKEN_OU_LOGICO
+%left RELACIONAL TOKEN_DIFERENTE TOKEN_IGUAL_IGUAL TOKEN_MENOR_IGUAL TOKEN_MAIOR_IGUAL
+%nonassoc CAST
+%left '<' '>'
 %left '+' '-'
 %left '*' '/'
+%right '!'
 
 %%
 
@@ -62,20 +77,25 @@ S 			: TOKEN_TIPO_INT TOKEN_MAIN '(' ')' BLOCO {
 
 				string declaracoes = "";
 				for(int i = 0; i < tabela_simbolos.size(); i++){
-					declaracoes = declaracoes + "\t" + tabela_simbolos[i].tipo_variavel + " " + tabela_simbolos[i].nome_variavel + ";\n";
+					declaracoes = declaracoes + "\t" + tabela_simbolos[i].tipo_variavel + " " + tabela_simbolos[i].nome_variavel_temporaria + ";\n";
 				}
 
 				cout << "/*Compilador SLA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\nint main(void){\n\n" << declaracoes << "\n" <<$5.traducao << "\n\treturn 0;\n}" << endl;
 				
-				for(int i = 0; i < tabela_simbolos.size(); i++){ //imprimi o que tem na tabela de simbolos 
-					cout << "Nome: " << tabela_simbolos[i].nome_variavel
+				for(int i = 0; i < tabela_simbolos.size(); i++){ //imprimir o que tem na tabela de simbolos 
+					cout << "Nome real: " << tabela_simbolos[i].nome_variavel_real
+						<< ", Nome temporario: " << tabela_simbolos[i].nome_variavel_temporaria 
 						<< ", Tipo: " << tabela_simbolos[i].tipo_variavel << endl;
 				}
 			}
 			;
 
-BLOCO		: '{' COMANDOS '}' {
-				$$.traducao = $2.traducao;
+NOVA_LINHA	: NOVA_LINHA TOKEN_NOVA_LINHA
+			| TOKEN_NOVA_LINHA
+			;
+
+BLOCO		: '{' NOVA_LINHA COMANDOS '}' {
+				$$.traducao = $3.traducao;
 			}
 			;
 
@@ -88,56 +108,56 @@ COMANDOS	: COMANDO COMANDOS {
 			}
 			;
 
-COMANDO 	: E ';'
-			| TOKEN_TIPO_INT TOKEN_ID ';' {
+COMANDO 	: E NOVA_LINHA
+			| TOKEN_TIPO_INT TOKEN_ID NOVA_LINHA {
 				$$.label = "";
-				$$.traducao = "";
 				$$.tipo = "";
+				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, $1.label);
+				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
 			}
-			| TOKEN_TIPO_FLOAT TOKEN_ID ';' {
+			| TOKEN_TIPO_FLOAT TOKEN_ID NOVA_LINHA {
 				$$.label = "";
-				$$.traducao = "";
 				$$.tipo = "";
+				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, $1.label);
+				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
 			}
-			| TOKEN_TIPO_STRING TOKEN_ID ';' {
+			| TOKEN_TIPO_STRING TOKEN_ID NOVA_LINHA {
 				$$.label = "";
-				$$.traducao = "";
 				$$.tipo = "";
+				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, $1.label);
+				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
 			}
-			| TOKEN_TIPO_BOOL TOKEN_ID ';' {
+			| TOKEN_TIPO_BOOL TOKEN_ID NOVA_LINHA {
 				$$.label = "";
-				$$.traducao = "";
 				$$.tipo = "";
+				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, $1.label);
+				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
 			}
 			;
 
 E 			: E '+' E {
 				$$.tipo = tipo_resultante($1, $3);
 
-				if(necessita_conversao_implicita_tipo($1, $3)){
+				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos(label_extra, $$.tipo);
+					add_na_tabela_simbolos("", label_extra, $$.tipo);
 
-					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
-						(($1.label != tipo_resultante($1, $3))? label_extra + " + " + $3.label: $1.label + " + " + label_extra) + ";\n";
+						(($1.tipo != tipo_resultante($1, $3))? label_extra + " + " + $3.label: $1.label + " + " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " + " + $3.label + ";\n";
 				}
@@ -145,22 +165,22 @@ E 			: E '+' E {
 			| E '-' E {
 				$$.tipo = tipo_resultante($1, $3);
 
-				if(necessita_conversao_implicita_tipo($1, $3)){
+				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos(label_extra, $$.tipo);
+					add_na_tabela_simbolos("", label_extra, $$.tipo);
 
-					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
-						(($1.label != tipo_resultante($1, $3))? label_extra + " - " + $3.label: $1.label + " - " + label_extra) + ";\n";
+						(($1.tipo != tipo_resultante($1, $3))? label_extra + " - " + $3.label: $1.label + " - " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " - " + $3.label + ";\n";
 				}
@@ -168,22 +188,22 @@ E 			: E '+' E {
 			| E '*' E {
 				$$.tipo = tipo_resultante($1, $3);
 
-				if(necessita_conversao_implicita_tipo($1, $3)){
+				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos(label_extra, $$.tipo);
+					add_na_tabela_simbolos("", label_extra, $$.tipo);
 
-					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
-						(($1.label != tipo_resultante($1, $3))? label_extra + " * " + $3.label: $1.label + " * " + label_extra) + ";\n";
+						(($1.tipo != tipo_resultante($1, $3))? label_extra + " * " + $3.label: $1.label + " * " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " * " + $3.label + ";\n";
 				}
@@ -191,24 +211,36 @@ E 			: E '+' E {
 			| E '/' E {
 				$$.tipo = tipo_resultante($1, $3);
 
-				if(necessita_conversao_implicita_tipo($1, $3)){
+				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos(label_extra, $$.tipo);
+					add_na_tabela_simbolos("", label_extra, $$.tipo);
 
-					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.label != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
-						(($1.label != tipo_resultante($1, $3))? label_extra + " / " + $3.label: $1.label + " / " + label_extra) + ";\n";
+						(($1.tipo != tipo_resultante($1, $3))? label_extra + " / " + $3.label: $1.label + " / " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
+				}
+			}
+			| TOKEN_ID '=' E {
+
+				TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos($1);
+
+				if(necessario_conversao_implicita_tipo(valor_dolar1.tipo_variavel, $3.tipo)){
+					$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = (" + valor_dolar1.tipo_variavel + ") " + 
+						$3.label + ";\n";
+				}
+				else {
+					$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = " + $3.label + ";\n";
 				}
 			}
 			| '(' E ')' {
@@ -216,94 +248,151 @@ E 			: E '+' E {
 				$$.tipo = $2.tipo;
 				$$.traducao = $2.traducao;
 			}
-			| '(' TOKEN_TIPO_INT ')' E {
+			| E '<' E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " < " + $3.label + ";\n";
+			}
+			| E '>' E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " > " + $3.label + ";\n";
+			}
+			| '!' E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $2.traducao + "\t" + $$.label + " = " + "!" + $2.label + ";\n";
+			}
+			| E TOKEN_MENOR_IGUAL E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " <= " + $3.label + ";\n";
+			}
+			| E TOKEN_MAIOR_IGUAL E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " >= " + $3.label + ";\n";
+			}
+			| E TOKEN_IGUAL_IGUAL E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " == " + $3.label + ";\n";
+			}
+			| E TOKEN_DIFERENTE E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " != " + $3.label + ";\n";
+			}
+			| E TOKEN_OU_LOGICO E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " || " + $3.label + ";\n";
+			}
+			| E TOKEN_E_LOGICO E {
+				$$.tipo = "int";
+				$$.label = gerar_label();
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " && " + $3.label + ";\n";
+			}
+			| '(' TOKEN_TIPO_INT ')' E %prec CAST {
 				if(possivel_realizar_casting_explicito("int", $4)){
 					$$.label = gerar_label();
 					$$.tipo = "int";
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(int) " + $4.label + ";\n";
 				}
 			}
-			| '(' TOKEN_TIPO_FLOAT ')' E {
+			| '(' TOKEN_TIPO_FLOAT ')' E %prec CAST {
 				if(possivel_realizar_casting_explicito("float", $4)){
 					$$.label = gerar_label();
 					$$.tipo = "float";
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+					cout << $$.label << endl;
 
 					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(float) " + $4.label + ";\n";
 				}
 			}
-			| '(' TOKEN_TIPO_STRING ')' E {
+			| '(' TOKEN_TIPO_STRING ')' E %prec CAST {
 				if(possivel_realizar_casting_explicito("string", $4)){
 					$$.label = gerar_label();
 					$$.tipo = "string";
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(string) " + $4.label + ";\n";
 				}
 			}
-			| '(' TOKEN_TIPO_BOOL ')' E {
+			| '(' TOKEN_TIPO_BOOL ')' E %prec CAST {
 				if(possivel_realizar_casting_explicito("bool", $4)){
 					$$.label = gerar_label();
 					$$.tipo = "bool";
-					add_na_tabela_simbolos($$.label, $$.tipo);
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(bool) " + $4.label + ";\n";
 				}
 			}
-			| TOKEN_ID '=' E {
-				$$.traducao = $1.traducao + $3.traducao + "\t" + $1.label + " = " + $3.label + ";\n";
-			}
 			| TOKEN_VARIAVEL_INT {
+				$$.label = $1.label;
 				$$.tipo = "int";
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
 				
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.traducao = "";
 			}
 			| TOKEN_VARIAVEL_FLOAT {
+				$$.label = $1.label;
 				$$.tipo = "float";
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
 				
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.traducao = "";
 			}
 			| TOKEN_VARIAVEL_STRING {
+				$$.label = $1.label;
 				$$.tipo = "string";
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
 				
-				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+				$$.traducao = "";
 			}
 			| TOKEN_VARIAVEL_BOOL {
-				$$.tipo = "bool";
-				$$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
-
 				char var_aux;
 				if ($1.label == "true") { var_aux = '1'; }
 				else if ($1.label == "false") { var_aux = '0'; }
+
+				$$.label = var_aux;
+				$$.tipo = "int";
 				
-				$$.traducao = "\t" + $$.label + " = " + var_aux + ";\n";
+				$$.traducao = "";
 			}
 			| TOKEN_ID {
 				bool encontrado = false;
 				TIPO_SIMBOLO variavel;
 				for(int i = 0; i < tabela_simbolos.size(); i++){
-					if(tabela_simbolos[i].nome_variavel == $1.label){
+					if(tabela_simbolos[i].nome_variavel_real == $1.label){
 						variavel = tabela_simbolos[i];
 						encontrado = true;
 					}
 				}
 				if(!encontrado){
-					yyerror("Voce nao declarou a variavel!");
+					yyerror("Voce nao declarou essa variavel!");
 				}
 				$$.tipo = variavel.tipo_variavel;
-                $$.label = gerar_label();
-				add_na_tabela_simbolos($$.label, $$.tipo);
+                $$.label = variavel.nome_variavel_temporaria;
 
-                $$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
+                $$.traducao = "";
             }
 			;
 
@@ -313,30 +402,46 @@ E 			: E '+' E {
 
 int yyparse();
 
-void add_na_tabela_simbolos(string valor_nome_variavel, string valor_tipo_variavel){
+void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel){
 
 	TIPO_SIMBOLO valor;
-	valor.nome_variavel = valor_nome_variavel;
-	valor.tipo_variavel = valor_tipo_variavel;
+	valor.nome_variavel_real = nome_variavel_real;
+	valor.nome_variavel_temporaria = nome_variavel_temporaria;
+
+	if(tipo_variavel == "bool"){
+		valor.tipo_variavel = "int";
+	}
+	else{
+		valor.tipo_variavel = tipo_variavel;
+	}
 
 	tabela_simbolos.push_back(valor);
 }
 
 string gerar_label(){
 	for(int i = 0; i < tabela_simbolos.size(); i++){ //caso o usuário declare uma variável "t1" por exemplo
-		if(tabela_simbolos[i].nome_variavel == "t" + to_string(label_num)){
+		if(tabela_simbolos[i].nome_variavel_temporaria == "t" + to_string(label_num)){
 			label_num++;
 		}
 	}
     return "t" + std::to_string(label_num);
 }
 
-bool necessita_conversao_implicita_tipo(atributos dolar1, atributos dolar3){
-	if(dolar1.tipo != dolar3.tipo){
-		if(dolar1.tipo == "int" && dolar3.tipo == "float"){
+TIPO_SIMBOLO buscar_na_tabela_simbolos(atributos a1){
+	for(int i = 0; i < tabela_simbolos.size(); i++){
+		if(a1.label == tabela_simbolos[i].nome_variavel_real){
+			return tabela_simbolos[i];
+		}
+	}
+	yyerror("Voce nao declarou essa variavel!");
+}
+
+bool necessario_conversao_implicita_tipo(string tipo1, string tipo2){
+	if(tipo1 != tipo2){
+		if(tipo1 == "int" && tipo2 == "float"){
 			return true;
 		}
-		else if(dolar1.tipo == "float" && dolar3.tipo == "int"){
+		else if(tipo1 == "float" && tipo2 == "int"){
 			return true;
 		}
 		else{
@@ -356,9 +461,11 @@ string tipo_resultante(atributos dolar1, atributos dolar3){
 		else if(dolar1.tipo == "float"){
 			return "float";
 		}
-		else if(dolar1.tipo == "bool"){
+		/*
+		else if(dolar1.tipo == "bool"){ //não tem tipo bool no código intermediário
 			return "bool";
 		}
+		*/
 		else if(dolar1.tipo == "string"){
 			return "string";
 		}
@@ -400,6 +507,6 @@ int main( int argc, char* argv[] ) {
 
 void yyerror( string MSG )
 {
-	cout << MSG << endl;
+	cout << "erro na linha " << yylineno << ": " << MSG << endl;
 	exit (0);
 }

@@ -13,7 +13,7 @@ ID {letter}({letter}|{digit})*
 
 {espaco}+                           ; // ignora espaços e tabs
 
-"\n"                                ; // ignora o /n
+(\n)                                { yylineno++; return TOKEN_NOVA_LINHA;}
 
 "main"                              { return TOKEN_MAIN; }
 
@@ -25,7 +25,7 @@ ID {letter}({letter}|{digit})*
 
 "bool"                              { yylval.label = "bool"; return TOKEN_TIPO_BOOL; }
 
-{digit}+                            { yylval.label = yytext; return TOKEN_VARIAVEL_INT; }
+{digit}+                            { yylval.label = yytext; yylval.tipo = "int"; return TOKEN_VARIAVEL_INT; }
 
 {digit}+("."{digit}+)?              { yylval.label = yytext; return TOKEN_VARIAVEL_FLOAT; }
 
@@ -37,7 +37,19 @@ ID {letter}({letter}|{digit})*
 
 [(){}[\];,]                         { return *yytext; }
 
-[+\-*/=]                            { return *yytext; }
+"&&"                                { yylval.label = yytext; return TOKEN_E_LOGICO; }
+
+"||"                                { yylval.label = yytext; return TOKEN_OU_LOGICO; }
+
+"!="                                { yylval.label = yytext; return TOKEN_DIFERENTE; }
+
+"=="                                { yylval.label = yytext; return TOKEN_IGUAL_IGUAL; }
+
+"<="                                { yylval.label = yytext; return TOKEN_MENOR_IGUAL; }
+
+">="                                { yylval.label = yytext; return TOKEN_MAIOR_IGUAL; }
+
+[+\-*/=<>!]                         { return *yytext; }
 
 .                                   { *yytext; }
                                 
