@@ -17,6 +17,8 @@ ID {letter}({letter}|{digit})*
 
 "main"                              { return TOKEN_MAIN; }
 
+"func"                              { return TOKEN_FUNC; }
+
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
 "float"                             { yylval.label = "float"; return TOKEN_TIPO_FLOAT; }

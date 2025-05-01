@@ -56,6 +56,7 @@
 %token TOKEN_VARIAVEL_BOOL
 %token TOKEN_ID
 %token TOKEN_MAIN
+%token TOKEN_FUNC 
 %token TOKEN_NOVA_LINHA
 %token TOKEN_FIM
 %token TOKEN_ERROR
@@ -73,7 +74,7 @@
 
 %%
 
-S 			: TOKEN_TIPO_INT TOKEN_MAIN '(' ')' BLOCO {
+S 			: TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 
 				string declaracoes = "";
 				for(int i = 0; i < tabela_simbolos.size(); i++){
@@ -311,73 +312,57 @@ E 			: E '+' E {
 
 				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " && " + $3.label + ";\n";
 			}
-			| '(' TOKEN_TIPO_INT ')' E %prec CAST {
-				if(possivel_realizar_casting_explicito("int", $4)){
+			| TOKEN_TIPO_INT '(' E ')' %prec CAST {
+				if(possivel_realizar_casting_explicito("int", $3)){
 					$$.label = gerar_label();
 					$$.tipo = "int";
 					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
-					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(int) " + $4.label + ";\n";
+					$$.traducao = $3.traducao + "\t" + $$.label + " = " + "(int) " + $3.label + ";\n";
 				}
 			}
-			| '(' TOKEN_TIPO_FLOAT ')' E %prec CAST {
-				if(possivel_realizar_casting_explicito("float", $4)){
+			| TOKEN_TIPO_FLOAT '(' E ')' %prec CAST {
+				if(possivel_realizar_casting_explicito("float", $3)){
 					$$.label = gerar_label();
 					$$.tipo = "float";
 					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
-					cout << $$.label << endl;
-
-					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(float) " + $4.label + ";\n";
-				}
-			}
-			| '(' TOKEN_TIPO_STRING ')' E %prec CAST {
-				if(possivel_realizar_casting_explicito("string", $4)){
-					$$.label = gerar_label();
-					$$.tipo = "string";
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
-
-					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(string) " + $4.label + ";\n";
-				}
-			}
-			| '(' TOKEN_TIPO_BOOL ')' E %prec CAST {
-				if(possivel_realizar_casting_explicito("bool", $4)){
-					$$.label = gerar_label();
-					$$.tipo = "bool";
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
-
-					$$.traducao = $4.traducao + "\t" + $$.label + " = " + "(bool) " + $4.label + ";\n";
+					$$.traducao = $3.traducao + "\t" + $$.label + " = " + "(float) " + $3.label + ";\n";
 				}
 			}
 			| TOKEN_VARIAVEL_INT {
-				$$.label = $1.label;
+				$$.label = gerar_label();
 				$$.tipo = "int";
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
 				
-				$$.traducao = "";
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_FLOAT {
-				$$.label = $1.label;
+				$$.label = gerar_label();
 				$$.tipo = "float";
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
 				
-				$$.traducao = "";
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_STRING {
-				$$.label = $1.label;
+				$$.label = gerar_label();
 				$$.tipo = "string";
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
 				
-				$$.traducao = "";
+				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_BOOL {
-				char var_aux;
-				if ($1.label == "true") { var_aux = '1'; }
-				else if ($1.label == "false") { var_aux = '0'; }
+				string var_aux;
+				if ($1.label == "true") { var_aux = "1"; }
+				else if ($1.label == "false") { var_aux = "0"; }
 
-				$$.label = var_aux;
+				$$.label = gerar_label();
 				$$.tipo = "int";
+				add_na_tabela_simbolos("", $$.label, $$.tipo);
 				
-				$$.traducao = "";
+				$$.traducao = "\t" + $$.label + " = " + var_aux + ";\n";
 			}
-			| TOKEN_ID {
+			| TOKEN_ID { //eu só sou chamado quando acontece alguma expressão do tipo: E = TOKEN_ID + E
 				bool encontrado = false;
 				TIPO_SIMBOLO variavel;
 				for(int i = 0; i < tabela_simbolos.size(); i++){
@@ -403,6 +388,12 @@ E 			: E '+' E {
 int yyparse();
 
 void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel){
+
+	for(int i = 0; i < tabela_simbolos.size(); i++){ //caso o usuário tente declarar a mesma variável
+		if(nome_variavel_real != "" && tabela_simbolos[i].nome_variavel_real == nome_variavel_real){
+			yyerror("Não é possível declarar a mesma variável duas vezes!");
+		}
+	}
 
 	TIPO_SIMBOLO valor;
 	valor.nome_variavel_real = nome_variavel_real;
