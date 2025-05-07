@@ -1,8 +1,0 @@
-func main() {
-    int a
-    float b
-    float c
-    a = 3.77
-    b = int(a)
-    c = b
-}

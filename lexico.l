@@ -6,7 +6,7 @@ digit [0-9]
 letter [a-zA-Z]
 espaco [ \t]
 
-ASCII \"(({letter}|{digit}|{espaco})*?)\"
+string \"(({letter}|{digit}|{espaco})*?)\"
 ID {letter}({letter}|{digit})*
 
 %%
@@ -17,7 +17,7 @@ ID {letter}({letter}|{digit})*
 
 "main"                              { return TOKEN_MAIN; }
 
-"func"                              { return TOKEN_FUNC; }
+"fun"                               { return TOKEN_FUNC; }
 
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
@@ -31,7 +31,7 @@ ID {letter}({letter}|{digit})*
 
 {digit}+("."{digit}+)?              { yylval.label = yytext; return TOKEN_VARIAVEL_FLOAT; }
 
-{ASCII}                             { yylval.label = yytext; return TOKEN_VARIAVEL_STRING; }
+{string}                            { yylval.label = yytext; return TOKEN_VARIAVEL_STRING; }
 
 ("true"|"false")                    { yylval.label = yytext; return TOKEN_VARIAVEL_BOOL; }
 
@@ -51,7 +51,7 @@ ID {letter}({letter}|{digit})*
 
 ">="                                { yylval.label = yytext; return TOKEN_MAIOR_IGUAL; }
 
-[+\-*/=<>!]                         { return *yytext; }
+[+\-*/=<>!%]                        { return *yytext; }
 
 .                                   { *yytext; }
                                 

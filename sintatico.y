@@ -37,6 +37,7 @@
 	bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4);
 
     int yylex(void);
+	
     void yyerror(string);
 %}
 
@@ -58,18 +59,18 @@
 %token TOKEN_MAIN
 %token TOKEN_FUNC 
 %token TOKEN_NOVA_LINHA
-%token TOKEN_FIM
-%token TOKEN_ERROR
 
 %start S
 
 %right '='
 %left LOGICO TOKEN_E_LOGICO TOKEN_OU_LOGICO
 %left RELACIONAL TOKEN_DIFERENTE TOKEN_IGUAL_IGUAL TOKEN_MENOR_IGUAL TOKEN_MAIOR_IGUAL
-%nonassoc CAST
 %left '<' '>'
+%nonassoc CAST
 %left '+' '-'
+%left '%'
 %left '*' '/'
+%right unario
 %right '!'
 
 %%
@@ -81,7 +82,7 @@ S 			: TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 					declaracoes = declaracoes + "\t" + tabela_simbolos[i].tipo_variavel + " " + tabela_simbolos[i].nome_variavel_temporaria + ";\n";
 				}
 
-				cout << "/*Compilador SLA*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\nint main(void){\n\n" << declaracoes << "\n" <<$5.traducao << "\n\treturn 0;\n}" << endl;
+				cout << "/*Compilador ceres*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\nint main(void){\n\n" << declaracoes << "\n" <<$5.traducao << "\n\treturn 0;\n}" << endl;
 				
 				for(int i = 0; i < tabela_simbolos.size(); i++){ //imprimir o que tem na tabela de simbolos 
 					cout << "Nome real: " << tabela_simbolos[i].nome_variavel_real
@@ -230,6 +231,42 @@ E 			: E '+' E {
 					add_na_tabela_simbolos("", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " / " + $3.label + ";\n";
+				}
+			}
+			| '-' E %prec unario {
+				if($2.tipo == "float" || $2.tipo == "int"){
+					$$.label = gerar_label();
+					$$.tipo = $2.tipo;
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+					$$.traducao = $2.traducao + "\t" + $$.label + " = " + "-" + $2.label + ";\n";
+				}
+				else{
+					yyerror("operação com tipo inválido!");
+				}
+			}
+			| '+' E %prec unario {
+				if($2.tipo == "float" || $2.tipo == "int"){
+					$$.label = gerar_label();
+					$$.tipo = $2.tipo;
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+					$$.traducao = $2.traducao + "\t" + $$.label + " = " + "+" + $2.label + ";\n";
+				}
+				else{
+					yyerror("operação com tipo inválido!");
+				}
+			}
+			| E '%' E {
+				if($1.tipo == "int" && $3.tipo == "int"){
+					$$.label = gerar_label();
+					$$.tipo = "int";
+					add_na_tabela_simbolos("", $$.label, $$.tipo);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " % " + $3.label + ";\n";
+				}
+				else{
+					yyerror("para realizar o modulo os numeros precisam ser int!");
 				}
 			}
 			| TOKEN_ID '=' E {
