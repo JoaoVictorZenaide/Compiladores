@@ -6,6 +6,8 @@ digit [0-9]
 letter [a-zA-Z]
 espaco [ \t]
 
+relacional ("!="|"=="|"<="|">=")
+
 string \"(({letter}|{digit}|{espaco})*?)\"
 ID {letter}({letter}|{digit})*
 
@@ -39,19 +41,21 @@ ID {letter}({letter}|{digit})*
 
 [(){}[\];,]                         { return *yytext; }
 
-"&&"                                { yylval.label = yytext; return TOKEN_E_LOGICO; }
+{relacional}                        { yylval.label = yytext; return TOKEN_OPERADOR_RELACIONAL; }
 
-"||"                                { yylval.label = yytext; return TOKEN_OU_LOGICO; }
+("&&"|"||")                         { yylval.label = yytext; return TOKEN_OPERADOR_E_OU; }
 
-"!="                                { yylval.label = yytext; return TOKEN_DIFERENTE; }
+[<>]                                { yylval.label = yytext; return TOKEN_OPERADOR_MENOR_MAIOR; }
 
-"=="                                { yylval.label = yytext; return TOKEN_IGUAL_IGUAL; }
+[!]                                 { yylval.label = yytext; return TOKEN_OPERADOR_NEGADO; }
 
-"<="                                { yylval.label = yytext; return TOKEN_MENOR_IGUAL; }
+[=]                                 { yylval.label = yytext; return TOKEN_OPERADOR_IGUAL; }
 
-">="                                { yylval.label = yytext; return TOKEN_MAIOR_IGUAL; }
+[%]                                 { yylval.label = yytext; return TOKEN_OPERADOR_RESTO; } 
 
-[+\-*/=<>!%]                        { return *yytext; }
+[+\-]                               { yylval.label = yytext; return TOKEN_OPERADOR_MAIS_MENOS; }
+
+[*/]                                { yylval.label = yytext; return TOKEN_OPERADOR_VEZES_DIVIDIDO; }
 
 .                                   { *yytext; }
                                 
