@@ -10,6 +10,8 @@
 
 	int label_num;
 
+	int escopo_atual;
+
     struct atributos{
         string label;
         string traducao;
@@ -22,13 +24,14 @@
 		string tipo_variavel;
 	} TIPO_SIMBOLO;
 
-	vector<TIPO_SIMBOLO> tabela_simbolos;
+	vector<vector<TIPO_SIMBOLO>> pilha_tabela_simbolos;
+	vector<vector<TIPO_SIMBOLO>> memoria_pilha_tabela_simbolos;
 
-	void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel);
+	void add_na_tabela_simbolos(int escopo, string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel);
 
 	string gerar_label();
 
-	TIPO_SIMBOLO buscar_na_tabela_simbolos(atributos a1);
+	TIPO_SIMBOLO buscar_na_tabela_simbolos(int escopo, atributos a1);
 
 	bool necessario_conversao_implicita_tipo(string tipo1, string tipo2);
 
@@ -86,23 +89,38 @@
 
 %%
 
-S 			: TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
+S 			: COMANDOS TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 
 				string declaracoes = "";
-				for(int i = 0; i < tabela_simbolos.size(); i++){
-					string tipo_em_c = tabela_simbolos[i].tipo_variavel; //impede bool no código intermediário
 
-    				if (tipo_em_c == "bool") { tipo_em_c = "int"; }
+				for(int i = 0; i < memoria_pilha_tabela_simbolos.size(); i++){
 
-					declaracoes = declaracoes + "\t" + tipo_em_c + " " + tabela_simbolos[i].nome_variavel_temporaria + ";\n";
+					for(int j = 0; j < memoria_pilha_tabela_simbolos[i].size(); j++){
+
+						string tipo_em_jpl = memoria_pilha_tabela_simbolos[i][j].tipo_variavel; //impede bool no código intermediário
+						string tipo_em_c;
+
+    					if (tipo_em_jpl == "bool") { 
+							tipo_em_c = "int"; 
+						}
+						else{
+							tipo_em_c = tipo_em_jpl;
+						}
+
+						declaracoes = declaracoes + "\t" + tipo_em_c + " " + memoria_pilha_tabela_simbolos[i][j].nome_variavel_temporaria + ";\n";
+					}
 				}
+				cout << "\n/*Compilador jpl*/\n" << "#include <iostream>\n\nint main(void){\n\n" << declaracoes << "\n" <<$6.traducao << "\n\treturn 0;\n}" << endl;
 
-				cout << "/*Compilador jpl*/\n" << "#include <iostream>\n#include <string.h>\n#include <stdio.h>\nint main(void){\n\n" << declaracoes << "\n" <<$5.traducao << "\n\treturn 0;\n}" << endl;
-				
-				for(int i = 0; i < tabela_simbolos.size(); i++){ //imprimir o que tem na tabela de simbolos 
-					cout << "Nome real: " << tabela_simbolos[i].nome_variavel_real
-						<< ", Nome temporario: " << tabela_simbolos[i].nome_variavel_temporaria 
-						<< ", Tipo: " << tabela_simbolos[i].tipo_variavel << endl;
+				for(int i = 0 ; i < memoria_pilha_tabela_simbolos.size(); i++){
+
+					cout << "\nEscopo " << i << ":\n";
+
+					for(int j = 0; j < memoria_pilha_tabela_simbolos[i].size(); j++){ //imprimir o que tem na tabela de simbolos 
+						cout << "Nome real: " << memoria_pilha_tabela_simbolos[i][j].nome_variavel_real
+							<< ", Nome temporario: " << memoria_pilha_tabela_simbolos[i][j].nome_variavel_temporaria 
+							<< ", Tipo: " << memoria_pilha_tabela_simbolos[i][j].tipo_variavel << endl;
+					}
 				}
 			}
 			;
@@ -111,8 +129,19 @@ NOVA_LINHA	: NOVA_LINHA TOKEN_NOVA_LINHA
 			| TOKEN_NOVA_LINHA
 			;
 
-BLOCO		: '{' NOVA_LINHA COMANDOS '}' {
-				$$.traducao = $3.traducao;
+BLOCO		: '{' { 	// a mesma coisa que BLOCO: '{' NOVA_LINHA COMANDOS '}' 
+
+				escopo_atual++;
+				pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
+				memoria_pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
+
+			} NOVA_LINHA COMANDOS '}' {
+
+				escopo_atual--;
+				pilha_tabela_simbolos.pop_back();
+
+				$$.traducao = $4.traducao;
+
 			}
 			;
 
@@ -131,50 +160,51 @@ COMANDO 	: E NOVA_LINHA
 				$$.tipo = "";
 				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
+				add_na_tabela_simbolos(escopo_atual, $2.label, gerar_label(), $1.label);
 			}
 			| TOKEN_TIPO_FLOAT TOKEN_ID NOVA_LINHA {
 				$$.label = "";
 				$$.tipo = "";
 				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
+				add_na_tabela_simbolos(escopo_atual, $2.label, gerar_label(), $1.label);
 			}
 			| TOKEN_TIPO_STRING TOKEN_ID NOVA_LINHA {
 				$$.label = "";
 				$$.tipo = "";
 				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
+				add_na_tabela_simbolos(escopo_atual, $2.label, gerar_label(), $1.label);
 			}
 			| TOKEN_TIPO_BOOL TOKEN_ID NOVA_LINHA {
 				$$.label = "";
 				$$.tipo = "";
 				$$.traducao = "";
 
-				add_na_tabela_simbolos($2.label, gerar_label(), $1.label);
+				add_na_tabela_simbolos(escopo_atual, $2.label, gerar_label(), $1.label);
 			}
 			;
 
-E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
+E 			: BLOCO
+			| E TOKEN_OPERADOR_MAIS_MENOS E {
 				$$.tipo = tipo_resultante($1, $3);
 
 				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos("", label_extra, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, $$.tipo);
 
 					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
 						(($1.tipo != tipo_resultante($1, $3))? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -185,19 +215,19 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos("", label_extra, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, $$.tipo);
 
 					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
 						(($1.tipo != tipo_resultante($1, $3))? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -206,7 +236,7 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if($2.tipo == "float" || $2.tipo == "int"){
 					$$.label = gerar_label();
 					$$.tipo = $2.tipo;
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $2.traducao + "\t" + $$.label + " = " + $1.label + $2.label + ";\n";
 				}
@@ -218,7 +248,7 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if($1.tipo == "int" && $3.tipo == "int"){
 					$$.label = gerar_label();
 					$$.tipo = "int";
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -235,7 +265,7 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(possivel_realizar_casting_explicito("int", $3)){
 					$$.label = gerar_label();
 					$$.tipo = "int";
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $3.traducao + "\t" + $$.label + " = " + "(int) " + $3.label + ";\n";
 				}
@@ -244,14 +274,14 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(possivel_realizar_casting_explicito("float", $3)){
 					$$.label = gerar_label();
 					$$.tipo = "float";
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $3.traducao + "\t" + $$.label + " = " + "(float) " + $3.label + ";\n";
 				}
 			}
 			| TOKEN_ID TOKEN_OPERADOR_IGUAL E {
 
-				TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos($1);
+				TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
 
 				if(necessario_conversao_implicita_tipo(valor_dolar1.tipo_variavel, $3.tipo)){
 					$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = (" + valor_dolar1.tipo_variavel + ") " + 
@@ -269,19 +299,19 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos("", label_extra, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, tipo_conversao);
 
 					comando_extra = "\t" + label_extra + " = " + '(' + tipo_conversao + ") " + (($1.tipo != tipo_conversao)? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, tipo_conversao);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
 						(($1.tipo != tipo_conversao)? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -294,19 +324,19 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos("", label_extra, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, tipo_conversao);
 
 					comando_extra = "\t" + label_extra + " = " + '(' + tipo_conversao + ") " + (($1.tipo != tipo_conversao)? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, tipo_conversao);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
 						(($1.tipo != tipo_conversao)? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -319,19 +349,19 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
 					string comando_extra;
 					string label_extra = gerar_label();
-					add_na_tabela_simbolos("", label_extra, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, tipo_conversao);
 
 					comando_extra = "\t" + label_extra + " = " + '(' + tipo_conversao + ") " + (($1.tipo != tipo_conversao)? $1.label: $3.label) + ";\n";
 
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, tipo_conversao);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, tipo_conversao);
 
 					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
 						(($1.tipo != tipo_conversao)? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
 					$$.label = gerar_label();
-					add_na_tabela_simbolos("", $$.label, $$.tipo);
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
@@ -339,28 +369,28 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 			| TOKEN_OPERADOR_NEGADO E {
 				$$.tipo = "bool";
 				$$.label = gerar_label();
-				add_na_tabela_simbolos("", $$.label, $$.tipo);
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 
 				$$.traducao = $2.traducao + "\t" + $$.label + " = " + $1.label + $2.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_INT {
 				$$.label = gerar_label();
 				$$.tipo = "int";
-				add_na_tabela_simbolos("", $$.label, $$.tipo);
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 				
 				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_FLOAT {
 				$$.label = gerar_label();
 				$$.tipo = "float";
-				add_na_tabela_simbolos("", $$.label, $$.tipo);
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 				
 				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
 			| TOKEN_VARIAVEL_STRING {
 				$$.label = gerar_label();
 				$$.tipo = "string";
-				add_na_tabela_simbolos("", $$.label, $$.tipo);
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo);
 				
 				$$.traducao = "\t" + $$.label + " = " + $1.label + ";\n";
 			}
@@ -371,18 +401,23 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 
 				$$.label = gerar_label();
 				$$.tipo = "bool";
-				add_na_tabela_simbolos("", $$.label, "bool");
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, "bool");
 				
 				$$.traducao = "\t" + $$.label + " = " + var_aux + ";\n";
 			}
 			| TOKEN_ID { //eu só sou chamado quando acontece alguma expressão do tipo: E = TOKEN_ID + E
 				bool encontrado = false;
 				TIPO_SIMBOLO variavel;
-				for(int i = 0; i < tabela_simbolos.size(); i++){
-					if(tabela_simbolos[i].nome_variavel_real == $1.label){
-						variavel = tabela_simbolos[i];
-						encontrado = true;
+				
+				for(int i = escopo_atual; i >= 0; i--){
+					for(int j = pilha_tabela_simbolos[i].size() - 1; j >= 0; j--){
+						if(pilha_tabela_simbolos[i][j].nome_variavel_real == $1.label){
+							variavel = pilha_tabela_simbolos[i][j];
+							encontrado = true;
+							break;
+						}
 					}
+					if(encontrado) { break; }
 				}
 				if(!encontrado){
 					yyerror("Voce nao declarou essa variavel!");
@@ -400,10 +435,10 @@ E 			: E TOKEN_OPERADOR_MAIS_MENOS E {
 
 int yyparse();
 
-void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel){
+void add_na_tabela_simbolos(int escopo, string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel){
 
-	for(int i = 0; i < tabela_simbolos.size(); i++){ //caso o usuário tente declarar a mesma variável
-		if(nome_variavel_real != "" && tabela_simbolos[i].nome_variavel_real == nome_variavel_real){
+	for(int i = 0; i < pilha_tabela_simbolos[escopo].size(); i++){ //caso o usuário tente declarar a mesma variável
+		if(nome_variavel_real != "" && pilha_tabela_simbolos[escopo][i].nome_variavel_real == nome_variavel_real){
 			yyerror("Não é possível declarar a mesma variável duas vezes!");
 		}
 	}
@@ -413,22 +448,23 @@ void add_na_tabela_simbolos(string nome_variavel_real, string nome_variavel_temp
 	valor.nome_variavel_temporaria = nome_variavel_temporaria;
 	valor.tipo_variavel = tipo_variavel;
 
-	tabela_simbolos.push_back(valor);
+	pilha_tabela_simbolos[escopo].push_back(valor);
+	memoria_pilha_tabela_simbolos[escopo].push_back(valor);
 }
 
 string gerar_label(){
-	for(int i = 0; i < tabela_simbolos.size(); i++){ //caso o usuário declare uma variável "t1" por exemplo
-		if(tabela_simbolos[i].nome_variavel_temporaria == "t" + to_string(label_num)){
-			label_num++;
-		}
-	}
+
+	label_num++;
+
     return "t" + std::to_string(label_num);
 }
 
-TIPO_SIMBOLO buscar_na_tabela_simbolos(atributos a1){
-	for(int i = 0; i < tabela_simbolos.size(); i++){
-		if(a1.label == tabela_simbolos[i].nome_variavel_real){
-			return tabela_simbolos[i];
+TIPO_SIMBOLO buscar_na_tabela_simbolos(int escopo, atributos a1){
+	for(int i = escopo; i >= 0; i--){
+		for(int j = 0; j < pilha_tabela_simbolos[i].size(); j++){
+			if(a1.label == pilha_tabela_simbolos[i][j].nome_variavel_real){
+				return pilha_tabela_simbolos[i][j];
+			}
 		}
 	}
 	yyerror("Voce nao declarou essa variavel!");
@@ -507,7 +543,13 @@ bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4){
 
 int main( int argc, char* argv[] ) {
 
-	label_num = 1;
+	label_num = 0;
+
+	pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>()); // inicializa escopo 0 (global)
+	memoria_pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>()); 
+	
+	escopo_atual = 0;
+
 	yyparse();
 
 	return 0;

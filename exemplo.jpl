@@ -1,6 +1,6 @@
+int a
 fun main() {
-    bool a
-    bool b 
-    bool c 
-    a = b || !c
+    int b
+    b = 5
+    a = b + 5
 }
