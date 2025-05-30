@@ -1,6 +1,4 @@
-int a
 fun main() {
-    int b
-    b = 5
-    a = b + 5
+    string a
+    a = "ab"
 }

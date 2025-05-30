@@ -4,11 +4,12 @@
 
 digit [0-9]
 letter [a-zA-Z]
+caracter_especial [!#$%&'()*+,\-./:;<>=?_{}|\[\]\\]
 espaco [ \t]
 
 relacional ("!="|"=="|"<="|">=")
 
-string \"(({letter}|{digit}|{espaco})*?)\"
+string \"({digit}|{letter}|{caracter_especial}|" ")*\"
 ID {letter}({letter}|{digit})*
 
 %%
@@ -20,6 +21,8 @@ ID {letter}({letter}|{digit})*
 "main"                              { return TOKEN_MAIN; }
 
 "fun"                               { return TOKEN_FUNC; }
+
+"contat"
 
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
