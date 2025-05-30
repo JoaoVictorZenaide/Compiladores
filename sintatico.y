@@ -84,10 +84,13 @@
 %token TOKEN_MAIN
 %token TOKEN_FUNC 
 %token TOKEN_NOVA_LINHA
+%token TOKEN_INPUT
+%token TOKEN_OUTPUT
 
 //precedências:
 
 %right TOKEN_OPERADOR_IGUAL 									// =
+%left TOKEN_OPERADOR_CONCATENACAO								// ++ (concatenação)
 %left TOKEN_OPERADOR_E_OU										// && ||
 %left TOKEN_OPERADOR_RELACIONAL TOKEN_OPERADOR_MENOR_MAIOR 		// < > <= >= != ==
 %nonassoc CAST													// precedência para o casting
@@ -117,6 +120,9 @@ S 			: COMANDOS TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 
     					if (tipo_em_jpl == "bool") { 
 							tipo_em_c = "int"; 
+						}
+						else if(tipo_em_jpl == "string"){
+							tipo_em_c = "char"; 
 						}
 						else{
 							tipo_em_c = tipo_em_jpl;
@@ -326,19 +332,25 @@ E 			: BLOCO
 
 				TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
 
-				if($3.tamanho_vetor != ""){ // no caso de um t1 que está sem o [x] (t1[x])
-					mudar_tamanho_vetor_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
-				}
-				if($3.valor_armazenado != ""){ // no caso de a = concatencação(b,c)
-					mudar_valor_armazenado_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
-				}
+				if(necessario_conversao_implicita_tipo(valor_dolar1.tipo_variavel, $3.tipo)){ // se for uma string, nunca vai entrar nesse if e sim no else
 
-				if(necessario_conversao_implicita_tipo(valor_dolar1.tipo_variavel, $3.tipo)){
 					$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = (" + valor_dolar1.tipo_variavel + ") " + 
 						$3.label + ";\n";
 				}
 				else {
-					$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = " + $3.label + ";\n";
+					if($3.tamanho_vetor != ""){ // no caso de um t1 que está sem o [x] (t1[x])
+						mudar_tamanho_vetor_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
+					}
+					if($3.valor_armazenado != ""){ // no caso de a = concatencação(b,c)
+						mudar_valor_armazenado_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
+					}
+
+					if($3.tamanho_vetor != "" && $3.valor_armazenado != ""){
+						$$.traducao = $1.traducao + $3.traducao + "\t" + "strcpy(" + valor_dolar1.nome_variavel_temporaria + ", " + $3.label + ")" + ";\n";
+					}
+					else{
+						$$.traducao = $1.traducao + $3.traducao + "\t" + valor_dolar1.nome_variavel_temporaria + " = " + $3.label + ";\n";
+					}
 				}
 			}
 			| E TOKEN_OPERADOR_MENOR_MAIOR E {
@@ -431,6 +443,37 @@ E 			: BLOCO
 
 				$$.traducao = $2.traducao + "\t" + $$.label + " = " + $1.label + $2.label + ";\n";
 			}
+			| TOKEN_ID TOKEN_OPERADOR_IGUAL TOKEN_INPUT '(' E ')'{
+				if($5.tipo == "string"){
+					TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
+
+					$$.tipo = valor_dolar1.tipo_variavel;
+					$$.label = gerar_label();
+					$$.tamanho_vetor = valor_dolar1.tamanho_variavel_vetor;
+					$$.valor_armazenado = valor_dolar1.valor_variavel_armazenado;
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
+
+					$$.traducao = $5.traducao + "\t" + "std::cout << " + $5.label + " << std::endl;\n" 
+					+ "\t" + "std::cin >> " + $$.label + ";\n";
+				}
+			}
+			| TOKEN_ID TOKEN_OPERADOR_IGUAL TOKEN_INPUT '(' ')'{
+				TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
+
+				$$.tipo = valor_dolar1.tipo_variavel;
+				$$.label = valor_dolar1.nome_variavel_temporaria;
+				$$.tamanho_vetor = valor_dolar1.tamanho_variavel_vetor;
+				$$.valor_armazenado = valor_dolar1.valor_variavel_armazenado;
+
+				string teste = "std::cin >> " + $$.label + ";\n";
+
+				$$.traducao = "\t" + teste; // "\t" + "std::cin >> " + $$.label + ";\n"; tava dando erro não sei pq então criei string teste
+			}
+			| TOKEN_OUTPUT '(' E ')'{
+				if($3.tipo == "string"){
+					$$.traducao = $3.traducao + "\t" + "std::cout << " + $3.label + " << std::endl;\n";
+				}
+			}
 			| E TOKEN_OPERADOR_CONCATENACAO E {
 				if(($1.tipo == "string" && $1.tamanho_vetor != "") && ($3.tipo == "string" && $3.tamanho_vetor != "")){
 					$$.tipo = "string";
@@ -440,19 +483,19 @@ E 			: BLOCO
 					$$.tamanho_vetor = to_string(tamanho_string);
 
 					string declaracao_caracteres;
-					string string_resultante = "\"";
+					string string_resultante = "\"";		// CUIDADO, perguntar pro braida sobre essa string que pode ser mt grande e dar tudo errado
 					int cont = 0;
 
 					for(int i = 0; i < atoi($1.tamanho_vetor.c_str()) + 1; i++){
 						if($1.valor_armazenado[i] != '"'){
-							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $1.valor_armazenado[i] + "\"" + ";\n";
+							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "'" + $1.valor_armazenado[i] + "'" + ";\n";
 							string_resultante = string_resultante + $1.valor_armazenado[i];
 							cont++;
 						}
 					}
 					for(int j = 0; j < atoi($3.tamanho_vetor.c_str()) + 1; j++){
 						if($3.valor_armazenado[j] != '"'){
-							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $3.valor_armazenado[j] + "\"" + ";\n";
+							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "'" + $3.valor_armazenado[j] + "'" + ";\n";
 							string_resultante = string_resultante + $3.valor_armazenado[j];
 							cont++;
 						}
@@ -462,11 +505,11 @@ E 			: BLOCO
 
 					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
 				
-					$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string-1) + "]" + " = " + "\"" + "\\" + "0" + "\"" + ";\n";
+					$$.traducao = $1.traducao + $3.traducao + declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string-1) + "]" + " = " + "'" + "\\" + "0" + "'" + ";\n";
 				}
 			}
 			| E '[' E ']' { // CUIDADO, precisa de casting implicito
-				if($1.tipo == "string" && (($3.tipo == "int") || ($3.tipo == "float"))){
+				if($1.tipo == "string" && $3.tipo == "int"){
 					$$.label = gerar_label();
 					$$.tipo = $1.tipo;
 					$$.tamanho_vetor = "";
@@ -474,6 +517,24 @@ E 			: BLOCO
 					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
 
 					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + "[" + $3.label + "]" + ";\n";
+				}
+				else if($1.tipo == "string" && $3.tipo == "float"){
+					$$.tamanho_vetor = "";
+					$$.valor_armazenado = "";
+
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, "int", $$.tamanho_vetor, $$.valor_armazenado);
+
+					string comando_extra = "\t" + label_extra + " = " + "int(" + $3.label + ")" + ";\n"; 
+					
+					$$.label = gerar_label();
+					$$.tipo = $1.tipo;
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
+
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + $1.label + "[" + label_extra + "]" + ";\n";
+				}
+				else{
+					yyerror("não é possível efetuar esse comando!");
 				}
 			}
 			| TOKEN_VARIAVEL_INT {
@@ -509,12 +570,12 @@ E 			: BLOCO
 
 				for(int i = 0; i < tamanho_string + 1; i++){
 					if($1.label[i] != '"'){
-						declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $1.label[i] + "\"" + ";\n";
+						declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "'" + $1.label[i] + "'" + ";\n";
 						cont++;
 					}
 				}
 				
-				$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string) + "]" + " = " + "\"" + "\\" + "0" + "\"" + ";\n";
+				$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string) + "]" + " = " + "'" + "\\" + "0" + "'" + ";\n";
 			}
 			| TOKEN_VARIAVEL_BOOL {
 				string var_aux;

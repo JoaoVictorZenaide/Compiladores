@@ -1,7 +1,4 @@
 fun main() {
-    string a
-    a = "ab"
-
-    string b
-    b = a[1]
+    int a
+    a = input()
 }

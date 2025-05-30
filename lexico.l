@@ -22,7 +22,9 @@ ID {letter}({letter}|{digit})*
 
 "fun"                               { return TOKEN_FUNC; }
 
-"contat"
+"input"                             { return TOKEN_INPUT; }
+
+"output"                            { return TOKEN_OUTPUT; }
 
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
