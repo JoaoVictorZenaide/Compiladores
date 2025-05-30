@@ -54,6 +54,8 @@ ID {letter}({letter}|{digit})*
 
 [=]                                 { yylval.label = yytext; return TOKEN_OPERADOR_IGUAL; }
 
+("++")                              { yylval.label = yytext; return TOKEN_OPERADOR_CONCATENACAO; }
+
 [%]                                 { yylval.label = yytext; return TOKEN_OPERADOR_RESTO; } 
 
 [+\-]                               { yylval.label = yytext; return TOKEN_OPERADOR_MAIS_MENOS; }

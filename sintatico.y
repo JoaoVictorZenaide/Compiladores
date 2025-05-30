@@ -41,11 +41,15 @@
 
 	void mudar_tamanho_vetor_na_pilha_tabela_simbolos(int escopo, atributos a1, atributos a2);
 
+	void mudar_valor_armazenado_na_pilha_tabela_simbolos(int escopo, atributos a1, atributos a2);
+
 	bool necessario_conversao_implicita_tipo(string tipo1, string tipo2);
 
 	string tipo_resultante(atributos dolar1, atributos dolar3);
 
 	bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4);
+
+	int strlen_da_shopee(string a);
 
     int yylex(void);
 	
@@ -68,6 +72,8 @@
 %token TOKEN_OPERADOR_MENOR_MAIOR
 %token TOKEN_OPERADOR_NEGADO
 %token TOKEN_OPERADOR_IGUAL
+
+%token TOKEN_OPERADOR_CONCATENACAO
 
 %token TOKEN_VARIAVEL_INT
 %token TOKEN_VARIAVEL_FLOAT
@@ -210,51 +216,28 @@ COMANDO 	: E NOVA_LINHA
 
 E 			: BLOCO
 			| E TOKEN_OPERADOR_MAIS_MENOS E {
+				$$.tipo = tipo_resultante($1, $3);
+				$$.tamanho_vetor = "";
+				$$.valor_armazenado = "";
 
-				if(($1.tipo == "string" && $1.tamanho_vetor != "") && ($3.tipo == "string" && $3.tamanho_vetor != "") && ($2.label == "+")){
-					$$.tipo = "string";
-					$$.valor_armazenado = $1.valor_armazenado + $3.valor_armazenado; // CUIDADO !!!
+				if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
+					string comando_extra;
+					string label_extra = gerar_label();
+					add_na_tabela_simbolos(escopo_atual, "", label_extra, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
+
+					comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
+
 					$$.label = gerar_label();
-
-					int tamanho_string = atoi($1.tamanho_vetor.c_str()) + atoi($3.tamanho_vetor.c_str());
-					$$.tamanho_vetor = to_string(tamanho_string);
-
 					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
 
-					string declaracao_caracteres;
-
-					for(int i = 0; i < tamanho_string; i++){
-						declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(i) + "]" + " = " + "\"" + $1.valor_armazenado[i+1] + "\"" + ";\n";
-					}
-					for(int j = 0; j < tamanho_string; j++){
-						declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(j) + "]" + " = " + "\"" + $3.valor_armazenado[j+1] + "\"" + ";\n";
-					}
-				
-					$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string) + "]" + " = " + "\"" + "\\" + "0" + "\"" + ";\n";
+					$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
+							(($1.tipo != tipo_resultante($1, $3))? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
 				}
 				else{
-					$$.tipo = tipo_resultante($1, $3);
-					$$.tamanho_vetor = "";
+					$$.label = gerar_label();
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
 
-					if(necessario_conversao_implicita_tipo($1.tipo, $3.tipo)){
-						string comando_extra;
-						string label_extra = gerar_label();
-						add_na_tabela_simbolos(escopo_atual, "", label_extra, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
-
-						comando_extra = "\t" + label_extra + " = " + '(' + $$.tipo + ") " + (($1.tipo != tipo_resultante($1, $3))? $1.label: $3.label) + ";\n";
-
-						$$.label = gerar_label();
-						add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
-
-						$$.traducao = $1.traducao + $3.traducao + comando_extra + "\t" + $$.label + " = " + 
-							(($1.tipo != tipo_resultante($1, $3))? label_extra + " " + $2.label + " " + $3.label: $1.label + " " + $2.label + " " + label_extra) + ";\n";
-					}
-					else{
-						$$.label = gerar_label();
-						add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
-
-						$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
-					}
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";\n";
 				}
 			}
 			| E TOKEN_OPERADOR_VEZES_DIVIDIDO E {
@@ -314,8 +297,8 @@ E 			: BLOCO
 				$$.label = $2.label;
 				$$.tipo = $2.tipo;
 				$$.traducao = $2.traducao;
-				$$.tamanho_vetor = $2.tamanho_vetor; // CUIDADO !!!
-				$$.valor_armazenado = $2.valor_armazenado; // CUIDADO !!!
+				$$.tamanho_vetor = $2.tamanho_vetor;
+				$$.valor_armazenado = $2.valor_armazenado;
 			}
 			| TOKEN_TIPO_INT '(' E ')' %prec CAST {
 				if(possivel_realizar_casting_explicito("int", $3)){
@@ -345,6 +328,9 @@ E 			: BLOCO
 
 				if($3.tamanho_vetor != ""){ // no caso de um t1 que está sem o [x] (t1[x])
 					mudar_tamanho_vetor_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
+				}
+				if($3.valor_armazenado != ""){ // no caso de a = concatencação(b,c)
+					mudar_valor_armazenado_na_pilha_tabela_simbolos(escopo_atual, $1, $3);
 				}
 
 				if(necessario_conversao_implicita_tipo(valor_dolar1.tipo_variavel, $3.tipo)){
@@ -445,6 +431,51 @@ E 			: BLOCO
 
 				$$.traducao = $2.traducao + "\t" + $$.label + " = " + $1.label + $2.label + ";\n";
 			}
+			| E TOKEN_OPERADOR_CONCATENACAO E {
+				if(($1.tipo == "string" && $1.tamanho_vetor != "") && ($3.tipo == "string" && $3.tamanho_vetor != "")){
+					$$.tipo = "string";
+					$$.label = gerar_label();
+
+					int tamanho_string = atoi($1.tamanho_vetor.c_str()) + atoi($3.tamanho_vetor.c_str()) - 1; // esse -1 retira um dos "\0"
+					$$.tamanho_vetor = to_string(tamanho_string);
+
+					string declaracao_caracteres;
+					string string_resultante = "\"";
+					int cont = 0;
+
+					for(int i = 0; i < atoi($1.tamanho_vetor.c_str()) + 1; i++){
+						if($1.valor_armazenado[i] != '"'){
+							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $1.valor_armazenado[i] + "\"" + ";\n";
+							string_resultante = string_resultante + $1.valor_armazenado[i];
+							cont++;
+						}
+					}
+					for(int j = 0; j < atoi($3.tamanho_vetor.c_str()) + 1; j++){
+						if($3.valor_armazenado[j] != '"'){
+							declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $3.valor_armazenado[j] + "\"" + ";\n";
+							string_resultante = string_resultante + $3.valor_armazenado[j];
+							cont++;
+						}
+					}
+
+					$$.valor_armazenado = string_resultante + "\"";
+
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
+				
+					$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string-1) + "]" + " = " + "\"" + "\\" + "0" + "\"" + ";\n";
+				}
+			}
+			| E '[' E ']' { // CUIDADO, precisa de casting implicito
+				if($1.tipo == "string" && (($3.tipo == "int") || ($3.tipo == "float"))){
+					$$.label = gerar_label();
+					$$.tipo = $1.tipo;
+					$$.tamanho_vetor = "";
+					$$.valor_armazenado = "";
+					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
+
+					$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + " = " + $1.label + "[" + $3.label + "]" + ";\n";
+				}
+			}
 			| TOKEN_VARIAVEL_INT {
 				$$.label = gerar_label();
 				$$.tipo = "int";
@@ -466,22 +497,21 @@ E 			: BLOCO
 			| TOKEN_VARIAVEL_STRING {
 				$$.label = gerar_label();
 				$$.tipo = "string";
-				$$.valor_armazenado = "";
+				$$.valor_armazenado = $1.label;
 
-				int tamanho_string = strlen($1.label.c_str()) - 2; // - as aspas // CUIDADO STRLEN
-				$$.tamanho_vetor = to_string(tamanho_string + 1); // + o "\0"
-
-				for(int i = 1; i < tamanho_string-1; i++){
-					$$.valor_armazenado = $$.valor_armazenado + $1.label[i];
-				}
+				int tamanho_string = strlen_da_shopee($1.label) - 2; // menos as aspas
+				$$.tamanho_vetor = to_string(tamanho_string + 1); // mais o "\0"
 
 				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
 
 				string declaracao_caracteres;
+				int cont = 0;
 
-				for(int i = 0; i < tamanho_string; i++){
-
-					declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(i) + "]" + " = " + "\"" + $1.label[i+1] + "\"" + ";\n";
+				for(int i = 0; i < tamanho_string + 1; i++){
+					if($1.label[i] != '"'){
+						declaracao_caracteres = declaracao_caracteres + "\t" + $$.label + "[" + to_string(cont) + "]" + " = " + "\"" + $1.label[i] + "\"" + ";\n";
+						cont++;
+					}
 				}
 				
 				$$.traducao = declaracao_caracteres + "\t" + $$.label + "[" + to_string(tamanho_string) + "]" + " = " + "\"" + "\\" + "0" + "\"" + ";\n";
@@ -518,8 +548,8 @@ E 			: BLOCO
 				}
 				$$.tipo = variavel.tipo_variavel;
                 $$.label = variavel.nome_variavel_temporaria;
-				$$.tamanho_vetor = variavel.tamanho_variavel_vetor; // CUIDADO !!!
-				$$.valor_armazenado = variavel.valor_variavel_armazenado; // CUIDADO !!!
+				$$.tamanho_vetor = variavel.tamanho_variavel_vetor;
+				$$.valor_armazenado = variavel.valor_variavel_armazenado;
 
                 $$.traducao = "";
             }
@@ -574,6 +604,17 @@ void mudar_tamanho_vetor_na_pilha_tabela_simbolos(int escopo, atributos a1, atri
 			if(a1.label == pilha_tabela_simbolos[i][j].nome_variavel_real){
 				pilha_tabela_simbolos[i][j].tamanho_variavel_vetor = a2.tamanho_vetor;
 				memoria_pilha_tabela_simbolos[i][j].tamanho_variavel_vetor = a2.tamanho_vetor;
+			}
+		}
+	}
+}
+
+void mudar_valor_armazenado_na_pilha_tabela_simbolos(int escopo, atributos a1, atributos a2){
+	for(int i = escopo; i >= 0; i--){
+		for(int j = 0; j < pilha_tabela_simbolos[i].size(); j++){
+			if(a1.label == pilha_tabela_simbolos[i][j].nome_variavel_real){
+				pilha_tabela_simbolos[i][j].valor_variavel_armazenado = a2.valor_armazenado;
+				memoria_pilha_tabela_simbolos[i][j].valor_variavel_armazenado = a2.valor_armazenado;
 			}
 		}
 	}
@@ -648,6 +689,19 @@ bool possivel_realizar_casting_explicito(string tipo_token, atributos dolar4){
 			yyerror("Não é possível efetuar casting explícito com esses tipos!");
 		}
 	}
+}
+
+int strlen_da_shopee(string a){
+	int cont = 0;
+	while(true){
+		if(a[cont] == '\0'){
+			break;
+		}
+		else{
+			cont++;
+		}
+	}
+	return cont;
 }
 
 int main( int argc, char* argv[] ) {
