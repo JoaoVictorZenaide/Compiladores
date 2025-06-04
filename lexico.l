@@ -26,6 +26,22 @@ ID {letter}({letter}|{digit})*
 
 "output"                            { return TOKEN_OUTPUT; }
 
+"if"                                { return TOKEN_IF; }
+
+"else"                              { return TOKEN_ELSE; }
+
+"while"                             { return TOKEN_WHILE; }
+
+"do"                                { return TOKEN_DO; }
+
+"for"                               { return TOKEN_FOR; }
+
+"switch"                            { return TOKEN_SWITCH; }
+
+"break"                             { return TOKEN_BREAK; }
+
+"continue"                          { return TOKEN_CONTINUE; }
+
 "int"                               { yylval.label = "int"; return TOKEN_TIPO_INT; }
 
 "float"                             { yylval.label = "float"; return TOKEN_TIPO_FLOAT; }
@@ -55,8 +71,6 @@ ID {letter}({letter}|{digit})*
 [!]                                 { yylval.label = yytext; return TOKEN_OPERADOR_NEGADO; }
 
 [=]                                 { yylval.label = yytext; return TOKEN_OPERADOR_IGUAL; }
-
-("++")                              { yylval.label = yytext; return TOKEN_OPERADOR_CONCATENACAO; }
 
 [%]                                 { yylval.label = yytext; return TOKEN_OPERADOR_RESTO; } 
 
