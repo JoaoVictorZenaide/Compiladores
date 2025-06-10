@@ -34,12 +34,16 @@
 	vector<vector<TIPO_SIMBOLO>> memoria_pilha_tabela_simbolos;
 
 	vector<string> pilha_rotulo_fim;
+	vector<string> pilha_rotulo_iteracao;
 	vector<string> pilha_rotulo_meio;
 	vector<string> pilha_rotulo_inicio;
 
 	string rotulo_loop_inicio_tmp;
+	string rotulo_loop_iteracao_tmp;
 	string rotulo_loop_meio_tmp;
 	string rotulo_loop_fim_tmp;
+
+	string variavel_switch_global = "";
 
 	void add_na_tabela_simbolos(int escopo, string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel, 
 			string tamanho_variavel_vetor, string valor_variavel_armazenado);
@@ -80,6 +84,8 @@
 %token TOKEN_DO
 %token TOKEN_FOR
 %token TOKEN_SWITCH
+%token TOKEN_CASE
+%token TOKEN_DEFAULT
 %token TOKEN_BREAK
 %token TOKEN_CONTINUE
 
@@ -174,19 +180,44 @@ NOVA_LINHA	: NOVA_LINHA TOKEN_NOVA_LINHA
 			| TOKEN_NOVA_LINHA
 			;
 
+BLOCO_CASE	: BLOCO_CASE TOKEN_CASE E NOVA_LINHA COMANDOS {
+				string rotulo_inicio = gerar_rotulo();
+				string rotulo_meio = gerar_rotulo();
+
+				$$.traducao = $1.traducao + 
+						"\t" + rotulo_inicio + ":\n" + 
+						$3.traducao +
+						"\t" + "if(" + variavel_switch_global + " == " + $3.label + ") goto " + rotulo_meio + ";\n" + 
+						"\t" + "goto " + "rotulo" + to_string(rotulo_num+1) + ";\n" +
+						"\t" + rotulo_meio + ":\n" + 
+						$5.traducao +
+						"\t" + "goto " + "rotulo_fim_switch" + ";\n";
+			}
+			| TOKEN_CASE E NOVA_LINHA COMANDOS {
+				string rotulo_inicio = gerar_rotulo();
+				string rotulo_meio = gerar_rotulo();
+
+				$$.traducao = "\t" + rotulo_inicio + ":\n" +
+						$2.traducao + 
+						"\t" + "if(" + variavel_switch_global + " == " + $2.label + ") goto " + rotulo_meio + ";\n" + 
+						"\t" + "goto " + "rotulo" + to_string(rotulo_num+1) + ";\n" +
+						"\t" + rotulo_meio + ":\n" + 
+						$4.traducao +
+						"\t" + "goto " + "rotulo_fim_switch" + ";\n";
+			}
+			;
+
 BLOCO_LOOP	: '{' { 	// a mesma coisa que BLOCO: '{' NOVA_LINHA COMANDOS '}' 
 
-				cout << "inicio producao bloco" << endl;
-
 				rotulo_loop_inicio_tmp = gerar_rotulo();
+				rotulo_loop_iteracao_tmp = gerar_rotulo();
 				rotulo_loop_meio_tmp = gerar_rotulo();
 				rotulo_loop_fim_tmp = gerar_rotulo();
 
 				pilha_rotulo_inicio.push_back(rotulo_loop_inicio_tmp);
+				pilha_rotulo_iteracao.push_back(rotulo_loop_iteracao_tmp);
 				pilha_rotulo_meio.push_back(rotulo_loop_meio_tmp);
 				pilha_rotulo_fim.push_back(rotulo_loop_fim_tmp);
-
-				cout << pilha_rotulo_fim.back() << "a2" << rotulo_loop_inicio_tmp << endl;
 				
 				escopo_atual++;
 				pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
@@ -198,8 +229,6 @@ BLOCO_LOOP	: '{' { 	// a mesma coisa que BLOCO: '{' NOVA_LINHA COMANDOS '}'
 				pilha_tabela_simbolos.pop_back();
 
 				$$.traducao = $4.traducao;
-
-				cout << "fim producao bloco" << endl;
 			}
 			;
 
@@ -271,8 +300,6 @@ COMANDO 	: E NOVA_LINHA
 					$$.tipo = "";
 					$$.tamanho_vetor = "";
 					$$.valor_armazenado = "";
-
-					cout << "if" << endl;
 					
 					string rotulo_if = gerar_rotulo();
 					string rotulo_fim = gerar_rotulo();
@@ -362,6 +389,7 @@ COMANDO 	: E NOVA_LINHA
 					add_na_tabela_simbolos(escopo_atual, "", novo_label, $7.tipo, "", "");
 
 					string rotulo_inicio = rotulo_loop_inicio_tmp;
+					string rotulo_iteracao = rotulo_loop_iteracao_tmp;
 					string rotulo_meio = rotulo_loop_meio_tmp;
 					string rotulo_fim = rotulo_loop_fim_tmp;
 
@@ -378,6 +406,8 @@ COMANDO 	: E NOVA_LINHA
 
 						"\t" + rotulo_meio + ":\n" +
 						$15.traducao +
+
+						"\t" + rotulo_iteracao + ":\n" +
 						$13.traducao +
 						$11.traducao +
 						"\t" + valor_dolar11.nome_variavel_temporaria + " = " + $13.label + ";\n" +
@@ -386,6 +416,7 @@ COMANDO 	: E NOVA_LINHA
 						"\t" + rotulo_fim + ":\n";
 
 					pilha_rotulo_inicio.pop_back();
+					pilha_rotulo_iteracao.pop_back();
 					pilha_rotulo_meio.pop_back();
 					pilha_rotulo_fim.pop_back();
 				}
@@ -404,6 +435,7 @@ COMANDO 	: E NOVA_LINHA
 					add_na_tabela_simbolos(escopo_atual, "", novo_label, $7.tipo, "", "");
 
 					string rotulo_inicio = rotulo_loop_inicio_tmp;
+					string rotulo_iteracao = rotulo_loop_iteracao_tmp;
 					string rotulo_meio = rotulo_loop_meio_tmp;
 					string rotulo_fim = rotulo_loop_fim_tmp;
 
@@ -420,6 +452,8 @@ COMANDO 	: E NOVA_LINHA
 
 						"\t" + rotulo_meio + ":\n" +
 						$15.traducao +
+
+						"\t" + rotulo_iteracao + ":\n" +
 						$13.traducao +
 						$11.traducao +
 						"\t" + valor_dolar11.nome_variavel_temporaria + " = " + $13.label + ";\n" +
@@ -428,6 +462,7 @@ COMANDO 	: E NOVA_LINHA
 						"\t" + rotulo_fim + ":\n";
 
 					pilha_rotulo_inicio.pop_back();
+					pilha_rotulo_iteracao.pop_back();
 					pilha_rotulo_meio.pop_back();
 					pilha_rotulo_fim.pop_back();
 				}
@@ -435,15 +470,28 @@ COMANDO 	: E NOVA_LINHA
 					yyerror("erro no for!");
 				}
 			}
-			| TOKEN_SWITCH '(' E ')' {
-				
+			| TOKEN_SWITCH '(' E ')' { //inicio do switch
+
+				escopo_atual++;
+				pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
+				memoria_pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
+
+				variavel_switch_global = $3.label;
+
+			} '{' NOVA_LINHA BLOCO_CASE TOKEN_DEFAULT NOVA_LINHA COMANDOS '}' NOVA_LINHA { //meio e fim do switch
+
+				escopo_atual--;
+				pilha_tabela_simbolos.pop_back();
+
+				string rotulo_inicio = gerar_rotulo();
+
+				$$.traducao = $3.traducao + $8.traducao + "\t" + rotulo_inicio + ":\n" + $11.traducao + "\t" + "rotulo_fim_switch" + ":\n";
 			}
 			| TOKEN_BREAK NOVA_LINHA {
     			if (pilha_rotulo_fim.empty()) {
-        			yyerror("Comando break fora de um laço!");
+        			yyerror("Comando break precisa estar dentro de um laço! (nessa LP)");
     			} 
 				else {
-					cout << "break" << endl;
         			$$.traducao = "\tgoto " + pilha_rotulo_fim.back() + ";\n";
     			}
 			}
@@ -452,7 +500,7 @@ COMANDO 	: E NOVA_LINHA
         			yyerror("Comando continue fora de um laço!");
     			} 
 				else {
-        			$$.traducao = "\tgoto " + pilha_rotulo_inicio.back() + ";\n";
+        			$$.traducao = "\tgoto " + pilha_rotulo_iteracao.back() + ";\n";
     			}
 			}
 			;
@@ -725,14 +773,8 @@ E 			: BLOCO
 				if($5.tipo == "string"){
 					TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
 
-					$$.tipo = valor_dolar1.tipo_variavel;
-					$$.label = gerar_label();
-					$$.tamanho_vetor = valor_dolar1.tamanho_variavel_vetor;
-					$$.valor_armazenado = valor_dolar1.valor_variavel_armazenado;
-					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado);
-
 					$$.traducao = $5.traducao + "\t" + "std::cout << " + $5.label + " << std::endl;\n" 
-					+ "\t" + "std::cin >> " + $$.label + ";\n";
+					+ "\t" + "std::cin >> " + valor_dolar1.nome_variavel_temporaria + ";\n";
 				}
 			}
 			| TOKEN_ID TOKEN_OPERADOR_IGUAL TOKEN_INPUT '(' ')'{

@@ -38,6 +38,10 @@ ID {letter}({letter}|{digit})*
 
 "switch"                            { return TOKEN_SWITCH; }
 
+"case"                              { return TOKEN_CASE; }
+
+"default"                           { return TOKEN_DEFAULT; }
+
 "break"                             { return TOKEN_BREAK; }
 
 "continue"                          { return TOKEN_CONTINUE; }

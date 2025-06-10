@@ -1,7 +1,4 @@
 fun main() {
-    int a
-    a = 0
-    do{
-        a = a + 1
-    }while(a < 3)
+    string a
+    a = input("seu CPF:")
 }
