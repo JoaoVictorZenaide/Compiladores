@@ -124,11 +124,14 @@
 %right unario													// + e - unario 
 %right TOKEN_OPERADOR_NEGADO									// !
 
-//não terminal inicial S
+//não terminal inicial PROGRAMA
 
-%start S
+%start PROGRAMA
 
 %%
+
+PROGRAMA	: S
+			| S NOVA_LINHA
 
 S 			: COMANDOS TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 
@@ -773,8 +776,18 @@ E 			: BLOCO
 				if($5.tipo == "string"){
 					TIPO_SIMBOLO valor_dolar1 = buscar_na_tabela_simbolos(escopo_atual, $1);
 
+					$$.tipo = valor_dolar1.tipo_variavel;
+					$$.label = valor_dolar1.nome_variavel_temporaria;
+					$$.tamanho_vetor = "200";
+					$$.valor_armazenado = valor_dolar1.valor_variavel_armazenado;
+
+					mudar_tamanho_vetor_na_pilha_tabela_simbolos(escopo_atual, $1, $$);
+
 					$$.traducao = $5.traducao + "\t" + "std::cout << " + $5.label + " << std::endl;\n" 
-					+ "\t" + "std::cin >> " + valor_dolar1.nome_variavel_temporaria + ";\n";
+					+ "\t" + "std::cin >> " + $$.label + ";\n";
+				}
+				else{
+					yyerror("a mensagem precisa ser do tipo string !");
 				}
 			}
 			| TOKEN_ID TOKEN_OPERADOR_IGUAL TOKEN_INPUT '(' ')'{
@@ -782,17 +795,17 @@ E 			: BLOCO
 
 				$$.tipo = valor_dolar1.tipo_variavel;
 				$$.label = valor_dolar1.nome_variavel_temporaria;
-				$$.tamanho_vetor = valor_dolar1.tamanho_variavel_vetor;
+				$$.tamanho_vetor = "200";
 				$$.valor_armazenado = valor_dolar1.valor_variavel_armazenado;
+
+				mudar_tamanho_vetor_na_pilha_tabela_simbolos(escopo_atual, $1, $$);
 
 				string teste = "std::cin >> " + $$.label + ";\n";
 
 				$$.traducao = "\t" + teste; // "\t" + "std::cin >> " + $$.label + ";\n"; tava dando erro não sei pq então criei string teste
 			}
 			| TOKEN_OUTPUT '(' E ')'{
-				if($3.tipo == "string"){
-					$$.traducao = $3.traducao + "\t" + "std::cout << " + $3.label + " << std::endl;\n";
-				}
+				$$.traducao = $3.traducao + "\t" + "std::cout << " + $3.label + " << std::endl;\n";
 			}
 			| E '[' E ']' { // CUIDADO, precisa de casting implicito
 				if($1.tipo == "string" && $3.tipo == "int"){

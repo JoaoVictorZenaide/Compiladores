@@ -1,4 +1,4 @@
 fun main() {
-    string a
-    a = input("seu CPF:")
+    string b
+    b = input("CPF:")
 }
