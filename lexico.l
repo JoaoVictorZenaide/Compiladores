@@ -78,6 +78,10 @@ ID {letter}({letter}|{digit})*
 
 [%]                                 { yylval.label = yytext; return TOKEN_OPERADOR_RESTO; } 
 
+"++"                                { yylval.label = yytext; return TOKEN_OPERADOR_MAIS_MAIS; }
+
+"--"                                { yylval.label = yytext; return TOKEN_OPERADOR_MENOS_MENOS; }
+
 [+\-]                               { yylval.label = yytext; return TOKEN_OPERADOR_MAIS_MENOS; }
 
 [*/]                                { yylval.label = yytext; return TOKEN_OPERADOR_VEZES_DIVIDIDO; }

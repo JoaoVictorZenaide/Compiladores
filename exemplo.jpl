@@ -1,4 +1,4 @@
 fun main() {
-    string b
-    b = input("CPF:")
+    string b[2][2]
+    b = {{"af", "bf"}}
 }
