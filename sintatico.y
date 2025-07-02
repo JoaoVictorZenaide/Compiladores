@@ -980,8 +980,10 @@ E 			: BLOCO
 				TIPO_SIMBOLO valor_linhas = buscar_na_tabela_simbolos_nome_variavel_temporaria(escopo_atual, temp3);
 				TIPO_SIMBOLO valor_colunas = buscar_na_tabela_simbolos_nome_variavel_temporaria(escopo_atual, temp4);
 
-				string bloco_matriz = "{";
+				string bloco_matriz = "";
 				int cont = atoi(valor_linhas.valor_variavel_armazenado.c_str()) * atoi(valor_colunas.valor_variavel_armazenado.c_str()) - 1;
+
+				vector<string> aux;
 
 				if(cont+1 == pilha_pilha_matriz.back().size()){
 					for (int i = atoi(valor_linhas.valor_variavel_armazenado.c_str())-1; i >= 0; i--) {
@@ -991,18 +993,36 @@ E 			: BLOCO
 							temp.label = ultima_pilha[cont].valor;
 							TIPO_SIMBOLO valor_dolar = buscar_na_tabela_simbolos_nome_variavel_temporaria(escopo_atual, temp);
 
-							bloco_matriz = bloco_matriz + valor_dolar.valor_variavel_armazenado + ", ";
+							if(j == 0){
+								bloco_matriz = bloco_matriz + valor_dolar.valor_variavel_armazenado;
+							}
+							else{
+								bloco_matriz = bloco_matriz + valor_dolar.valor_variavel_armazenado + ", ";
+							}
 
 							cont--;
 						}
-						bloco_matriz = bloco_matriz + "}, ";
+						bloco_matriz = bloco_matriz + "}";
+						aux.push_back(bloco_matriz);
+						bloco_matriz = "";
 					}	
 				}
 				else{
 					yyerror("os dados da matriz não batem !");
 				}
 
-				$$.traducao = declaracoes + "\t" + $1.label + " = " + bloco_matriz + "};\n";
+				string matriz_final_ordenada = "{";
+
+				for (int i = aux.size()-1; i >=0; i--) {
+					if(i == 0){
+						matriz_final_ordenada = matriz_final_ordenada + aux[i];
+					}
+					else{
+						matriz_final_ordenada = matriz_final_ordenada + aux[i] + ", ";
+					}
+				}
+
+				$$.traducao = declaracoes + "\t" + $1.label + " = " + matriz_final_ordenada + "};\n";
 
 				proteger_matriz_val = false;
 			}
