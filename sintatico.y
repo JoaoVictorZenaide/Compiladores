@@ -56,6 +56,8 @@
 
 	string variavel_switch_global = "";
 
+	bool proteger_matriz_val = false;
+
 	void add_na_tabela_simbolos(int escopo, string nome_variavel_real, string nome_variavel_temporaria, string tipo_variavel, 
 			string tamanho_variavel_vetor, string valor_variavel_armazenado, string valor_num_linhas, string valor_num_colunas);
 
@@ -204,6 +206,11 @@ NOVA_LINHA	: NOVA_LINHA TOKEN_NOVA_LINHA
 			;
 
 RECURSAO_C_M: ',' E RECURSAO_C_M {
+				if(proteger_matriz_val == false){ //primeira coisa a executar dentro de BLOCO_M
+					pilha_pilha_matriz.push_back(vector<elemento_matriz>());
+					proteger_matriz_val = true;
+				}
+
 				$$.label = $2.label;
 				$$.tipo = $2.tipo;
 				$$.tamanho_vetor = $2.tamanho_vetor;
@@ -218,7 +225,10 @@ RECURSAO_C_M: ',' E RECURSAO_C_M {
 				pilha_pilha_matriz.back().push_back(dolar);
 			}
 			| ',' E {
-				pilha_pilha_matriz.push_back(vector<elemento_matriz>()); //primeira coisa a executar dentro de BLOCO_M
+				if(proteger_matriz_val == false){ //primeira coisa a executar dentro de BLOCO_M
+					pilha_pilha_matriz.push_back(vector<elemento_matriz>());
+					proteger_matriz_val = true;
+				}
 
 				$$.label = $2.label;
 				$$.tipo = $2.tipo;
@@ -237,6 +247,10 @@ RECURSAO_C_M: ',' E RECURSAO_C_M {
 			;
 
 CELULA_M 	: E RECURSAO_C_M {
+				if(proteger_matriz_val == false){ //primeira coisa a executar dentro de BLOCO_M
+					pilha_pilha_matriz.push_back(vector<elemento_matriz>());
+					proteger_matriz_val = true;
+				}
 
 				$$.label = $1.label;
 				$$.tipo = $1.tipo;
@@ -253,21 +267,9 @@ CELULA_M 	: E RECURSAO_C_M {
 			}			
 			;
 
-RECURSAO_L_M: '{' CELULA_M '}' {
+LINHA_M 	: '{' CELULA_M '}' {
 			}
-			| ',' '{' CELULA_M '}' {
-			}
-			|
-			;
-/*
-RECURSAO_L_M: ',' '{' CELULA_M '}' RECURSAO_L_M {
-			}
-			| ',' '{' CELULA_M '}' {
-			}
-			|
-			;*/
-
-LINHA_M 	: '{' CELULA_M '}' RECURSAO_L_M {
+			| '{' CELULA_M '}' ',' LINHA_M {
 			}
 			;
 
@@ -979,12 +981,12 @@ E 			: BLOCO
 				TIPO_SIMBOLO valor_colunas = buscar_na_tabela_simbolos_nome_variavel_temporaria(escopo_atual, temp4);
 
 				string bloco_matriz = "{";
-				int cont = atoi(valor_linhas.valor_variavel_armazenado.c_str()) + atoi(valor_colunas.valor_variavel_armazenado.c_str()) - 2;
+				int cont = atoi(valor_linhas.valor_variavel_armazenado.c_str()) * atoi(valor_colunas.valor_variavel_armazenado.c_str()) - 1;
 
-				if(cont >= 0){
-					for (int i = 0; i < atoi(valor_linhas.valor_variavel_armazenado.c_str()); i++) {
+				if(cont+1 == pilha_pilha_matriz.back().size()){
+					for (int i = atoi(valor_linhas.valor_variavel_armazenado.c_str())-1; i >= 0; i--) {
 						bloco_matriz = bloco_matriz + "{";
-						for(int j = 0; j < atoi(valor_colunas.valor_variavel_armazenado.c_str()); j++){
+						for(int j = atoi(valor_colunas.valor_variavel_armazenado.c_str())-1; j >= 0; j--){
 							atributos temp;
 							temp.label = ultima_pilha[cont].valor;
 							TIPO_SIMBOLO valor_dolar = buscar_na_tabela_simbolos_nome_variavel_temporaria(escopo_atual, temp);
@@ -994,13 +996,15 @@ E 			: BLOCO
 							cont--;
 						}
 						bloco_matriz = bloco_matriz + "}, ";
-					}
+					}	
 				}
 				else{
-					yyerror("erro interno na lógica de matrizes !");
+					yyerror("os dados da matriz não batem !");
 				}
 
 				$$.traducao = declaracoes + "\t" + $1.label + " = " + bloco_matriz + "};\n";
+
+				proteger_matriz_val = false;
 			}
 			| E TOKEN_OPERADOR_MENOR_MAIOR E {
 				$$.tipo = "bool";
