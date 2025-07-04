@@ -1,7 +1,14 @@
-void a(int ab, float cd){
-    ab = 3
+int soma(int a, int b){
+    int c
+    c = a + b
+    ret c
+}
+int soma(int c, float d){
+    int e
+    e = c + d
+    ret e
 }
 fun main() {
     int a
-    a = a(4, 4.0)
+    a = soma(5, 6)
 }

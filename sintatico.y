@@ -199,7 +199,7 @@ S 			: FUNCOES COMANDOS TOKEN_FUNC TOKEN_MAIN '(' ')' BLOCO {
 						}
 
 						if(memoria_pilha_tabela_simbolos[i][j].num_linhas_variavel == "" && memoria_pilha_tabela_simbolos[i][j].num_colunas_variavel == ""){
-							declaracoes = declaracoes + tipo_em_c + " " + memoria_pilha_tabela_simbolos[i][j].nome_variavel_temporaria + complemento + ";\n";
+							declaracoes = declaracoes + "\t" + tipo_em_c + " " + memoria_pilha_tabela_simbolos[i][j].nome_variavel_temporaria + complemento + ";\n";
 						}
 					}
 				}
@@ -729,7 +729,7 @@ BLOCO		: '{' { 	// a mesma coisa que BLOCO: '{' NOVA_LINHA COMANDOS '}'
 				memoria_pilha_tabela_simbolos.push_back(vector<TIPO_SIMBOLO>());
 
 			} NOVA_LINHA COMANDOS '}' {
-				
+
 				escopo_atual--;
 				pilha_tabela_simbolos.pop_back();
 
@@ -750,12 +750,11 @@ BLOCO_RET	: '{' { //CUIDADO, não tem casting no retorno
 				pilha_tabela_simbolos.pop_back();
 
 				$$.traducao = $4.traducao + $6.traducao + "\t" + "return" + " " + $6.label + ";";
-
 			}
 			;
 
 COMANDOS	: COMANDOS COMANDO  { // CUIDADO, antes era COMANDO COMANDOS, tirei o shift/reduce
-				$$.traducao = $2.traducao + $1.traducao;
+				$$.traducao = $1.traducao + $2.traducao;
 			}
 			| {
 				$$.traducao = "";
@@ -1166,7 +1165,7 @@ E 			: BLOCO
 					$$.label = gerar_label();
 					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
 
-					$$.traducao = $1.traducao + "\t" + $$.label + " = " + $1.label + " + " + "1" + ";\n";
+					$$.traducao = $1.traducao + "\t" + $$.label + " = " + $1.label + " + " + "1" + ";\n" + "\t" + $1.label + " = " + $$.label + ";\n";
 				}
 			}
 			| E TOKEN_OPERADOR_MENOS_MENOS {
@@ -1178,7 +1177,7 @@ E 			: BLOCO
 					$$.label = gerar_label();
 					add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
 
-					$$.traducao = $1.traducao + "\t" + $$.label + " = " + $1.label + " - " + "1" + ";\n";
+					$$.traducao = $1.traducao + "\t" + $$.label + " = " + $1.label + " - " + "1" + ";\n" + "\t" + $1.label + " = " + $$.label + ";\n";
 				}
 			}
 			| E TOKEN_OPERADOR_MAIS_MENOS E {
