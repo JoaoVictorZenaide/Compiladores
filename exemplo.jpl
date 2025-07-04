@@ -1,4 +1,7 @@
+int a(int ab){
+    ret 3
+}
 fun main() {
-    int b[2][1]
-    b = {{1}, {2}}
+    int a
+    a = a(4)
 }

@@ -22,6 +22,8 @@ ID {letter}({letter}|{digit})*
 
 "fun"                               { return TOKEN_FUNC; }
 
+"ret"                               { return TOKEN_RETURN; }
+
 "input"                             { return TOKEN_INPUT; }
 
 "output"                            { return TOKEN_OUTPUT; }
