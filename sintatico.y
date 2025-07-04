@@ -327,8 +327,7 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
-					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -387,8 +386,7 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
-					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -447,8 +445,7 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
-					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -507,8 +504,7 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
-					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -567,8 +563,7 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
-					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -928,20 +923,6 @@ COMANDO 	: E NOVA_LINHA
 					add_na_tabela_simbolos(escopo_atual, $2.label, $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, $$.num_linhas, $$.num_colunas);
 
 					$$.traducao = $2.traducao + $4.traducao + $7.traducao + "\t" + "char" + " " + $$.label + "[" + $4.label + "][" + $7.label + "];\n";
-				}
-			}
-			| TOKEN_VOID TOKEN_ID '[' E ']' '[' E ']' NOVA_LINHA { // PRECISA CONVERSAO IMPLICITA
-				if($4.tipo == "int" && $7.tipo == "int"){
-					$$.tipo = "void";
-					$$.tamanho_vetor = ""; //no caso de ser um vetor
-					$$.valor_armazenado = "";
-					$$.num_linhas = $4.label; //no caso de ser uma matriz
-					$$.num_colunas = $7.label;
-
-					$$.label = gerar_label();
-					add_na_tabela_simbolos(escopo_atual, $2.label, $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, $$.num_linhas, $$.num_colunas);
-
-					$$.traducao = $2.traducao + $4.traducao + $7.traducao + "\t" + $$.tipo + " " + $$.label + "[" + $4.label + "][" + $7.label + "];\n";
 				}
 			}
 			| TOKEN_IF '(' E ')' BLOCO NOVA_LINHA {
@@ -1353,25 +1334,13 @@ E 			: BLOCO
 				}
 			}
 			| TOKEN_ID '(' LISTA_ATR ')' {
-				$$.label = gerar_label();
-				$$.tipo = $1.tipo;
-				$$.tamanho_vetor = "";
-				$$.valor_armazenado = "";
-				$$.num_linhas = "";
-				$$.num_colunas = "";
-
-				int indice_funcao;
-				int acertos = 0;
-				bool erro;
-				int tamanho;
-
 				bool encontrou_funcao_compatível = false;
 
-				for (size_t i = 0; i < vetor_funcoes.size(); ++i) {
+				for (int i = 0; i < vetor_funcoes.size(); ++i) {
 					if ($1.label == vetor_funcoes[i].nome) {
 						if (atributos_aux2.size() == vetor_funcoes[i].atributos.size()) {
 							bool tipos_batem = true;
-							for (size_t j = 0; j < atributos_aux2.size(); ++j) {
+							for (int j = 0; j < atributos_aux2.size(); ++j) {
 								if (atributos_aux2[j].tipo != vetor_funcoes[i].atributos[j].tipo) {
 									tipos_batem = false;
 									break;
@@ -1379,8 +1348,14 @@ E 			: BLOCO
 							}
 
 							if (tipos_batem) {
-								indice_funcao = i;
 								encontrou_funcao_compatível = true;
+								$$.label = gerar_label();
+								$$.tipo = vetor_funcoes[i].tipo;
+								cout << vetor_funcoes[i].tipo << endl;
+								$$.tamanho_vetor = "";
+								$$.valor_armazenado = "";
+								$$.num_linhas = "";
+								$$.num_colunas = "";
 								break;
 							}
 						}
@@ -1391,7 +1366,7 @@ E 			: BLOCO
 					yyerror("é necessário que a função seja compatível com números e tipos de atributos!");
 				}
 
-				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
+				//add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
 
 				string declaracoes = "";
 
@@ -1404,7 +1379,7 @@ E 			: BLOCO
 					}
 				}
 
-				$$.traducao = "\t" + $$.label + " = " + $1.label + "(" + declaracoes + ")" + ";\n";
+				$$.traducao = "\t" + $1.label + "(" + declaracoes + ")" + ";\n";
 
 				atributos_aux2.clear();
 			}

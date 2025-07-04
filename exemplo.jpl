@@ -1,14 +1,7 @@
-int soma(int a, int b){
-    int c
-    c = a + b
-    ret c
-}
-int soma(int c, float d){
-    int e
-    e = c + d
-    ret e
-}
 fun main() {
-    int a
-    a = soma(5, 6)
+    string a = "ban"
+    string b = "ana"
+    string c = a + b
+
+    string d = c[4]
 }
