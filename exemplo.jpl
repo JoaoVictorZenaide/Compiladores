@@ -1,7 +1,7 @@
-int a(int ab){
-    ret 3
+void a(int ab, float cd){
+    ab = 3
 }
 fun main() {
     int a
-    a = a(4)
+    a = a(4, 4.0)
 }

@@ -26,6 +26,8 @@ ID {letter}({letter}|{digit})*
 
 "input"                             { return TOKEN_INPUT; }
 
+"void"                              { return TOKEN_VOID; }
+
 "output"                            { return TOKEN_OUTPUT; }
 
 "if"                                { return TOKEN_IF; }

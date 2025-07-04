@@ -56,6 +56,8 @@
 
 	vector<atributos_funcao> atributos_aux;
 
+	vector<atributos_funcao> atributos_aux2;
+
 	vector<vector<TIPO_SIMBOLO>> pilha_tabela_simbolos;
 	vector<vector<TIPO_SIMBOLO>> memoria_pilha_tabela_simbolos;
 
@@ -143,6 +145,7 @@
 %token TOKEN_INPUT
 %token TOKEN_OUTPUT
 %token TOKEN_RETURN
+%token TOKEN_VOID
 
 //precedências:
 
@@ -324,7 +327,8 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
+					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -383,7 +387,8 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
+					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -442,7 +447,8 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
+					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -501,7 +507,68 @@ FUNCAO 		: TOKEN_TIPO_INT TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO_RET NOVA_LINHA
 					}
 				}
 
-				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
+					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
+
+				atributos_aux.clear();
+			}
+			| TOKEN_VOID TOKEN_ID '(' ATRIBUTOS_FUNCAO ')' BLOCO NOVA_LINHA {
+				$$.label = "";
+				$$.tipo = "void";
+				$$.tamanho_vetor = "";
+				$$.valor_armazenado = "";
+				$$.num_linhas = "";
+				$$.num_colunas = "";
+
+				funcoes f;
+    			f.tipo = $1.label;
+  				f.nome = $2.label;
+				f.atributos = atributos_aux;
+
+				bool funcao_ja_declarada = false;
+
+				for (int i = 0; i < vetor_funcoes.size(); i++) {
+					// Verifica se o nome é igual
+					if (vetor_funcoes[i].nome == f.nome) {
+						// Verifica se tem o mesmo número de atributos
+						if (vetor_funcoes[i].atributos.size() == f.atributos.size()) {
+							bool iguais = true;
+
+							// Verifica se cada atributo é igual (tipo e nome)
+							for (int j = 0; j < f.atributos.size(); j++) {
+								if (f.atributos[j].tipo != vetor_funcoes[i].atributos[j].tipo) {
+									iguais = false;
+									break;
+								}
+							}
+
+							if (iguais) {
+								funcao_ja_declarada = true;
+								break;
+							}
+						}
+					}
+				}
+
+				if (funcao_ja_declarada) {
+					yyerror("Função já declarada com os mesmos atributos!");
+				} else {
+					vetor_funcoes.push_back(f); // adiciona a nova função
+				}
+
+				string declaracoes_atributos = "";
+
+				for(int i = atributos_aux.size()-1; i >= 0; i--){
+					if(i == 0){
+						declaracoes_atributos = declaracoes_atributos + atributos_aux[i].tipo + " " + atributos_aux[i].nome;
+					}
+					else{
+						declaracoes_atributos = declaracoes_atributos + atributos_aux[i].tipo + " " + atributos_aux[i].nome + ", ";
+					}
+				}
+
+				$$.traducao = $2.traducao + $$.tipo + " " + $2.label + "(" + declaracoes_atributos + ");\n\n" + 
+					$$.tipo + " " + $2.label + "(" + declaracoes_atributos + ")" + "{\n" + $6.traducao + "\n}\n";
 
 				atributos_aux.clear();
 			}
@@ -584,11 +651,23 @@ LISTA_ATR	: LISTA_ATR_VAZIA
 			;
 
 LISTA_ATR_PREENCHIDA			
-			: E
-			| E ',' LISTA_ATR
+			: E {
+				atributos_funcao temp;
+				temp.nome = $1.label;
+				temp.tipo = $1.tipo;
+				atributos_aux2.push_back(temp);
+			}
+			| E ',' LISTA_ATR {
+				atributos_funcao temp;
+				temp.nome = $1.label;
+				temp.tipo = $1.tipo;
+				atributos_aux2.push_back(temp);
+			}
 			;
 
-LISTA_ATR_VAZIA:
+LISTA_ATR_VAZIA: {
+				atributos_aux2.clear();
+			}
 			;
 
 BLOCO_CASE	: BLOCO_CASE TOKEN_CASE E NOVA_LINHA COMANDOS {
@@ -850,6 +929,20 @@ COMANDO 	: E NOVA_LINHA
 					add_na_tabela_simbolos(escopo_atual, $2.label, $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, $$.num_linhas, $$.num_colunas);
 
 					$$.traducao = $2.traducao + $4.traducao + $7.traducao + "\t" + "char" + " " + $$.label + "[" + $4.label + "][" + $7.label + "];\n";
+				}
+			}
+			| TOKEN_VOID TOKEN_ID '[' E ']' '[' E ']' NOVA_LINHA { // PRECISA CONVERSAO IMPLICITA
+				if($4.tipo == "int" && $7.tipo == "int"){
+					$$.tipo = "void";
+					$$.tamanho_vetor = ""; //no caso de ser um vetor
+					$$.valor_armazenado = "";
+					$$.num_linhas = $4.label; //no caso de ser uma matriz
+					$$.num_colunas = $7.label;
+
+					$$.label = gerar_label();
+					add_na_tabela_simbolos(escopo_atual, $2.label, $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, $$.num_linhas, $$.num_colunas);
+
+					$$.traducao = $2.traducao + $4.traducao + $7.traducao + "\t" + $$.tipo + " " + $$.label + "[" + $4.label + "][" + $7.label + "];\n";
 				}
 			}
 			| TOKEN_IF '(' E ')' BLOCO NOVA_LINHA {
@@ -1268,9 +1361,53 @@ E 			: BLOCO
 				$$.num_linhas = "";
 				$$.num_colunas = "";
 
+				int indice_funcao;
+				int acertos = 0;
+				bool erro;
+				int tamanho;
+
+				bool encontrou_funcao_compatível = false;
+
+				for (size_t i = 0; i < vetor_funcoes.size(); ++i) {
+					if ($1.label == vetor_funcoes[i].nome) {
+						if (atributos_aux2.size() == vetor_funcoes[i].atributos.size()) {
+							bool tipos_batem = true;
+							for (size_t j = 0; j < atributos_aux2.size(); ++j) {
+								if (atributos_aux2[j].tipo != vetor_funcoes[i].atributos[j].tipo) {
+									tipos_batem = false;
+									break;
+								}
+							}
+
+							if (tipos_batem) {
+								indice_funcao = i;
+								encontrou_funcao_compatível = true;
+								break;
+							}
+						}
+					}
+				}
+
+				if (!encontrou_funcao_compatível) {
+					yyerror("é necessário que a função seja compatível com números e tipos de atributos!");
+				}
+
 				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
 
-				$$.traducao = "\t" + $$.label + " = " + $1.label + "(" + ")" + ";\n";
+				string declaracoes = "";
+
+				for(int i = atributos_aux2.size()-1; i >= 0; i--){
+					if(i == 0){
+						declaracoes = declaracoes + atributos_aux2[i].nome;
+					}
+					else{
+						declaracoes = declaracoes + atributos_aux2[i].nome + ", ";
+					}
+				}
+
+				$$.traducao = "\t" + $$.label + " = " + $1.label + "(" + declaracoes + ")" + ";\n";
+
+				atributos_aux2.clear();
 			}
 			| TOKEN_ID TOKEN_OPERADOR_IGUAL BLOCO_M {
 				$$.label = "";
