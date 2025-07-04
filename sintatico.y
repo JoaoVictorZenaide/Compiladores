@@ -1366,7 +1366,7 @@ E 			: BLOCO
 					yyerror("é necessário que a função seja compatível com números e tipos de atributos!");
 				}
 
-				//add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
+				add_na_tabela_simbolos(escopo_atual, "", $$.label, $$.tipo, $$.tamanho_vetor, $$.valor_armazenado, "", "");
 
 				string declaracoes = "";
 

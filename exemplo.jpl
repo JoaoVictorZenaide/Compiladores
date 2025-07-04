@@ -1,7 +1,10 @@
-fun main() {
-    string a = "ban"
-    string b = "ana"
-    string c = a + b
-
-    string d = c[4]
+int soma(int a, int b){
+    ret a + b
+}
+int soma(int c, float d){
+    ret c + d
+}
+fun main(){
+    int c
+    c = soma(3, 5)
 }
